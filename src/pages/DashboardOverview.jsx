@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, Activity, Target, CheckCircle2, AlertOctagon, TrendingUp, PieChart as PieIcon, XCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
@@ -236,6 +237,7 @@ export default function DashboardOverview() {
     };
   }, [data]);
 
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
 
   if (isLoading) {
@@ -422,8 +424,13 @@ export default function DashboardOverview() {
                 <div>
                    <p className="text-2xl font-black text-emerald-500">{stats.sdgsStats.passed}</p>
                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Success</p>
-                </div>
-                <button className="bg-sky-50 text-sky-600 font-bold text-xs px-4 py-2 rounded-xl border border-sky-100 hover:bg-sky-500 hover:text-white transition-all ml-auto self-end">View More</button>
+                 </div>
+                 <button 
+                  onClick={() => navigate('/sdgs')}
+                  className="bg-sky-50 text-sky-600 font-bold text-xs px-4 py-2 rounded-xl border border-sky-100 hover:bg-sky-500 hover:text-white transition-all ml-auto self-end"
+                >
+                  View More
+                </button>
              </div>
           </div>
         </div>
@@ -459,9 +466,14 @@ export default function DashboardOverview() {
                 </div>
                 <div>
                    <p className="text-2xl font-black text-emerald-500">{stats.healthStats.passed}</p>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Success</p>
-                </div>
-                <button className="bg-emerald-50 text-emerald-600 font-bold text-xs px-4 py-2 rounded-xl border border-emerald-100 hover:bg-emerald-500 hover:text-white transition-all ml-auto self-end">View More</button>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Success</p>
+                 </div>
+                 <button 
+                  onClick={() => navigate('/healthkpi')}
+                  className="bg-emerald-50 text-emerald-600 font-bold text-xs px-4 py-2 rounded-xl border border-emerald-100 hover:bg-emerald-500 hover:text-white transition-all ml-auto self-end"
+                >
+                  View More
+                </button>
              </div>
           </div>
         </div>
