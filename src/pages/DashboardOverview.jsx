@@ -236,6 +236,8 @@ export default function DashboardOverview() {
     };
   }, [data]);
 
+  const [searchTerm, setSearchTerm] = useState('');
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -476,8 +478,14 @@ export default function DashboardOverview() {
               <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-1">Total Consolidated Database ({stats.totalKPIs} Measures)</p>
            </div>
            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-slate-400 uppercase">Search by Key:</span>
-              <div className="h-10 w-48 bg-white border border-slate-200 rounded-2xl shadow-inner shadow-slate-50"></div>
+              <span className="text-xs font-bold text-slate-400 uppercase">Search KPI:</span>
+              <input 
+                type="text"
+                placeholder="ค้นหาชื่อตัวชี้วัด..."
+                className="h-11 w-64 bg-white border border-slate-200 rounded-2xl px-4 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all shadow-inner shadow-slate-50 placeholder:text-slate-300"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
            </div>
         </div>
 
@@ -493,7 +501,9 @@ export default function DashboardOverview() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 bg-white">
-              {stats.allIndicators.map((kpi, index) => {
+              {stats.allIndicators
+                .filter(kpi => kpi.title.toLowerCase().includes(searchTerm.toLowerCase()))
+                .map((kpi, index) => {
                 
                 let statusBg, statusText, statusLabel, statusDot, StatusIcon;
                 
