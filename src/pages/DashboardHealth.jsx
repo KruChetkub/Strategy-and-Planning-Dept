@@ -447,7 +447,7 @@ export default function DashboardHealth() {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 border border-emerald-200 flex items-center justify-center shrink-0">
                  <Activity className="text-emerald-600" size={20} />
               </div>
-              {(selectedMain || <span className="text-slate-400">แดชบอร์ด Health KPI ในส่วนที่เกี่ยวข้องกับกรมควบคุมโรค</span>)}
+              {(selectedMain || <span className="text-slate-400">Health KPI ในส่วนที่เกี่ยวข้องกับกรมควบคุมโรค</span>)}
            </h1>
            {selectedSub !== 'ALL' && <p className="text-cyan-600 font-bold ml-14">(เจาะจงเฉพาะ: {selectedSub})</p>}
         </div>
