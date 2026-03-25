@@ -871,7 +871,7 @@ export default function DashboardHealth() {
                               {kpi.pop_b ? Number(kpi.pop_b).toLocaleString() : '-'}
                             </td>
                             <td className="p-4 text-center bg-slate-50 font-black text-slate-800 text-lg rounded-md">
-                              {parseFloat(kpi.current_value) > 0 ? kpi.current_value : '-'}
+                              {!isNaN(parseFloat(kpi.current_value)) ? kpi.current_value : '-'}
                             </td>
                             <td className="p-4 text-center">
                               <div className={`inline-flex items-center justify-center gap-1.5 px-3 py-1 pb-1.5 rounded-lg border ${kpi.status_info.border} bg-white whitespace-nowrap shadow-sm`}>
