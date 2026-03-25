@@ -367,8 +367,7 @@ export default function Dashboard({ categoryFilter }) {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider w-32 border-r border-slate-100/50">No. / รหัส</th>
-                  <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider w-1/4">หมวดหมู่ / ตัวชี้วัด</th>
+                  <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider w-1/3">No. / หมวดหมู่ / ตัวชี้วัด</th>
                   <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider text-right">เป้าหมาย (2573)</th>
                   <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider text-right">ผลงาน</th>
                   <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider w-40 text-center">สถานะ</th>
@@ -377,28 +376,39 @@ export default function Dashboard({ categoryFilter }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {dashboardData.map((kpi, index) => (
-                  <tr key={kpi.id} className="hover:bg-sky-50/50 transition-colors group">
-                    <td className="py-4 px-6 align-top">
-                      <div className="flex flex-col gap-1.5 w-full">
-                        <span className="text-slate-500 font-bold text-base">#{index + 1}</span>
-                        {kpi.code ? (
-                          <span 
-                            className="text-[11px] font-bold px-2 py-1.5 rounded-md bg-white border border-slate-200 text-slate-600 line-clamp-2 hover:bg-slate-100 hover:text-sky-700 cursor-help transition-all shadow-sm leading-tight break-words" 
-                            title={kpi.code}
-                          >
-                            {kpi.code.match(/^เป้าหมาย\s*[0-9.]+/)?.[0] || kpi.code}
-                          </span>
-                        ) : null}
-                      </div>
-                    </td>
+                {Object.entries(
+                  dashboardData.reduce((acc, kpi) => {
+                    const code = kpi.code || 'ตัวชี้วัดอื่นๆ';
+                    if (!acc[code]) acc[code] = [];
+                    acc[code].push(kpi);
+                    return acc;
+                  }, {})
+                ).map(([groupCode, kpis], groupIndex) => (
+                  <React.Fragment key={groupIndex}>
+                    {/* Header Row for the Group */}
+                    <tr className="bg-sky-50 border-b border-sky-100">
+                      <td colSpan="6" className="p-0">
+                        <div className="py-3 px-6 text-sm font-black text-sky-800 border-l-4 border-sky-500 shadow-sm sticky left-0 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <span className="leading-relaxed">{groupCode}</span>
+                          <span className="text-xs font-bold text-sky-600 bg-white px-3 py-1 rounded-full border border-sky-200 shadow-sm whitespace-nowrap">{kpis.length} ตัวชี้วัด</span>
+                        </div>
+                      </td>
+                    </tr>
                     
-                    <td className="py-4 px-6 align-top">
-                      <p className="text-sm font-bold text-sky-600 mb-1">{kpi.category}</p>
-                      <p className="text-base font-bold text-slate-800 line-clamp-3 leading-relaxed" title={kpi.title}>{kpi.title}</p>
-                    </td>
+                    {/* Data Rows for the Group */}
+                    {kpis.map((kpi, index) => (
+                      <tr key={kpi.id} className="hover:bg-sky-50/50 transition-colors group">
+                        <td className="py-5 px-6 align-top">
+                          <div className="flex gap-4 items-start">
+                            <span className="text-slate-500 font-black text-sm mt-0.5 w-7 shrink-0 border border-slate-200 rounded-md text-center py-1 bg-white group-hover:bg-slate-50 group-hover:border-slate-300 transition-colors shadow-sm">{index + 1}</span>
+                            <div>
+                              <p className="text-sm font-bold text-sky-600 mb-1">{kpi.category}</p>
+                              <p className="text-base font-bold text-slate-800 leading-relaxed max-w-xl" title={kpi.title}>{kpi.title}</p>
+                            </div>
+                          </div>
+                        </td>
 
-                    <td className="py-4 px-6 align-top text-right">
+                        <td className="py-5 px-6 align-top text-right">
                       <span className="font-black text-slate-700 text-sm">{kpi.target_value || '-'}</span>
                     </td>
 
@@ -427,13 +437,15 @@ export default function Dashboard({ categoryFilter }) {
                       {kpi.agency || '-'}
                     </td>
 
-                    <td className="py-4 px-6 align-top">
+                    <td className="py-5 px-6 align-top">
                       <div className="text-xs text-slate-500 italic max-w-xs break-words bg-slate-50/50 p-2 rounded-lg border border-transparent group-hover:border-slate-100 transition-all">
                         {kpi.note || '-'}
                       </div>
                     </td>
                   </tr>
                 ))}
+                </React.Fragment>
+              ))}
               </tbody>
             </table>
           </div>
