@@ -205,7 +205,7 @@ export default function Dashboard({ categoryFilter }) {
               {categoryFilter ? `แดชบอร์ด ${categoryFilter}` : 'ภาพรวมตัวชี้วัดสำคัญ (รวมทั้งหมด)'}
             </h1>
             <p className="text-sky-600 font-semibold text-sm mt-2 flex items-center gap-2">
-              <Activity size={14} className="animate-pulse" /> กองยุทธศาสตร์และแผนงาน
+              <Activity size={14} className="animate-pulse" /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
             </p>
           </div>
         </div>
@@ -232,7 +232,7 @@ export default function Dashboard({ categoryFilter }) {
             {categoryFilter ? `แดชบอร์ด ${categoryFilter}` : 'ภาพรวมตัวชี้วัดสำคัญ (รวมทั้งหมด)'}
           </h1>
           <p className="text-sky-600 font-semibold text-sm mt-2 flex items-center gap-2">
-            <Activity size={14} className="animate-pulse" /> กองยุทธศาสตร์และแผนงาน
+            <Activity size={14} className="animate-pulse" /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
           </p>
         </div>
       </div>
