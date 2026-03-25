@@ -454,7 +454,7 @@ export default function DashboardHealth() {
 
         <div className="flex flex-col md:flex-row gap-4 relative z-10 w-full xl:w-auto shrink-0 items-center">
            <div className="space-y-1">
-              <label className="text-emerald-700 text-[11px] uppercase tracking-wider font-bold ml-1">เลือกตัวชี้วัดหลัก</label>
+              <label className="text-emerald-700 text-[15px] uppercase tracking-wider font-bold ml-1">เลือกตัวชี้วัดหลัก</label>
               <select 
                  value={selectedMain} 
                  onChange={(e) => setSelectedMain(e.target.value)}
