@@ -572,7 +572,7 @@ export default function DashboardHealth() {
                           <BarChart data={categoryStats.regData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                             <XAxis dataKey="name" stroke="#64748b" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10}} />
-                            <YAxis stroke="#64748b" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} domain={[dataMin => Math.min(0, dataMin), dataMax => Math.max(100, dataMax)]} />
+                            <YAxis stroke="#64748b" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} domain={[dataMin => Math.min(0, Math.floor(dataMin / 20) * 20), dataMax => Math.max(100, Math.ceil(dataMax / 20) * 20)]} />
                             <Tooltip 
                               cursor={{fill: '#f1f5f9'}} 
                               contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '0.5rem', color: '#1e293b', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
@@ -815,7 +815,7 @@ export default function DashboardHealth() {
                          <BarChart data={barData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                            <XAxis dataKey="name" stroke="#64748b" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} />
-                           <YAxis stroke="#64748b" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} domain={[dataMin => Math.min(0, dataMin), dataMax => Math.max(100, dataMax)]} />
+                           <YAxis stroke="#64748b" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} domain={[dataMin => Math.min(0, Math.floor(dataMin / 20) * 20), dataMax => Math.max(100, Math.ceil(dataMax / 20) * 20)]} />
                            <Tooltip 
                              cursor={{fill: '#f1f5f9'}} 
                              contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '0.5rem', color: '#1e293b', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
