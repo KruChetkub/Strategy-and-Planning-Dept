@@ -277,7 +277,7 @@ export default function DashboardOverview() {
              </div>
              <div className="text-center md:text-left">
                 <h1 className="text-5xl font-black text-slate-800 tracking-tight leading-none mb-3">ตัวชี้วัดสำคัญ</h1>
-                <p className="text-sky-600 font-black uppercase tracking-[0.25em] text-xs">กองยุทธศาสตร์และแผนงาน</p>
+                <p className="text-sky-600 font-black uppercase tracking-[0.25em] text-xs">กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค</p>
                 <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-4">
                    <div className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                       Year: <span className="text-slate-800">2026</span>
