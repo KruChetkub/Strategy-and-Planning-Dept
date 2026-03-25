@@ -312,15 +312,15 @@ export default function DashboardOverview() {
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-3xl font-black text-slate-800">{passedPercent}%</span>
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">SUCCESS</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">SUCCESS</p>
                 </div>
              </div>
              <div className="pr-4">
-                <p className="text-xs font-black text-sky-600 uppercase tracking-widest mb-1">System Health</p>
+                <p className="text-sm font-black text-sky-600 uppercase tracking-widest mb-1">System Health</p>
                 <div className="h-1.5 w-24 bg-slate-200 rounded-full overflow-hidden mb-2">
                    <div className="h-full bg-emerald-500 rounded-full" style={{width: `${passedPercent}%`}}></div>
                 </div>
-                <p className="text-[10px] text-slate-400 font-bold italic">
+                <p className="text-xs text-slate-400 font-bold italic">
                    ผ่านเป้าหมาย {stats.totalPassed} จาก {stats.totalKPIs}
                 </p>
              </div>
@@ -340,8 +340,8 @@ export default function DashboardOverview() {
              <CheckCircle2 className="text-emerald-500" size={24} />
           </div>
           <p className="text-4xl font-black text-slate-800 tracking-tighter">{stats.totalPassed}</p>
-          <p className="text-xs font-black text-emerald-600 uppercase tracking-widest mt-1">บรรลุเป้าหมาย</p>
-          <p className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Status: Normal (100%)</p>
+          <p className="text-sm font-black text-emerald-600 uppercase tracking-widest mt-1">บรรลุเป้าหมาย</p>
+          <p className="text-xs text-slate-400 font-medium mt-1 uppercase tracking-wider">Status: Normal (100%)</p>
         </div>
 
         {/* Warning Card */}
@@ -353,8 +353,8 @@ export default function DashboardOverview() {
              <Activity className="text-yellow-500" size={24} />
           </div>
           <p className="text-4xl font-black text-slate-800 tracking-tighter">{stats.totalWarning}</p>
-          <p className="text-xs font-black text-yellow-600 uppercase tracking-widest mt-1">เฝ้าระวัง / ต่ำกว่าเป้า</p>
-          <p className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Status: Warning (75-99%)</p>
+          <p className="text-sm font-black text-yellow-600 uppercase tracking-widest mt-1">เฝ้าระวัง / ต่ำกว่าเป้า</p>
+          <p className="text-xs text-slate-400 font-medium mt-1 uppercase tracking-wider">Status: Warning (75-99%)</p>
         </div>
 
         {/* Risk Card */}
@@ -368,8 +368,8 @@ export default function DashboardOverview() {
           <p className="text-4xl font-black text-slate-800 tracking-tighter">
             {stats.allIndicators.filter(k => k.status === 'failed_50').length}
           </p>
-          <p className="text-xs font-black text-orange-600 uppercase tracking-widest mt-1">ระดับเสี่ยง</p>
-          <p className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Status: At Risk (50-74%)</p>
+          <p className="text-sm font-black text-orange-600 uppercase tracking-widest mt-1">ระดับเสี่ยง</p>
+          <p className="text-xs text-slate-400 font-medium mt-1 uppercase tracking-wider">Status: At Risk (50-74%)</p>
         </div>
 
         {/* Critical Card */}
@@ -383,8 +383,8 @@ export default function DashboardOverview() {
           <p className="text-4xl font-black text-slate-800 tracking-tighter">
             {stats.allIndicators.filter(k => k.status === 'failed_0').length}
           </p>
-          <p className="text-xs font-black text-rose-600 uppercase tracking-widest mt-1">ขั้นวิกฤติ</p>
-          <p className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-wider">Status: Critical ({"<"}50%)</p>
+          <p className="text-sm font-black text-rose-600 uppercase tracking-widest mt-1">ขั้นวิกฤติ</p>
+          <p className="text-xs text-slate-400 font-medium mt-1 uppercase tracking-wider">Status: Critical ({"<"}50%)</p>
         </div>
 
       </div>
@@ -418,12 +418,12 @@ export default function DashboardOverview() {
              <p className="text-slate-500 font-medium mb-6">ความคืบหน้าของโครงการย่อยภายใต้วาระการพัฒนาที่ยั่งยืน</p>
              <div className="flex justify-center md:justify-start gap-8 border-t border-slate-100 pt-6">
                 <div>
-                   <p className="text-2xl font-black text-slate-800">{stats.sdgsStats.total}</p>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total KPIs</p>
+                   <p className="text-3xl font-black text-slate-800">{stats.sdgsStats.total}</p>
+                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Total KPIs</p>
                 </div>
                 <div>
-                   <p className="text-2xl font-black text-emerald-500">{stats.sdgsStats.passed}</p>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Success</p>
+                   <p className="text-3xl font-black text-emerald-500">{stats.sdgsStats.passed}</p>
+                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Success</p>
                  </div>
                  <button 
                   onClick={() => navigate('/sdgs')}
@@ -461,12 +461,12 @@ export default function DashboardOverview() {
              <p className="text-slate-500 font-medium mb-6">ความคืบหน้าของตัวชี้วัดสำคัญระดับกระทรวง (Health KPI)</p>
              <div className="flex justify-center md:justify-start gap-8 border-t border-slate-100 pt-6">
                 <div>
-                   <p className="text-2xl font-black text-slate-800">{stats.healthStats.total}</p>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total KPIs</p>
+                   <p className="text-3xl font-black text-slate-800">{stats.healthStats.total}</p>
+                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Total KPIs</p>
                 </div>
                 <div>
-                   <p className="text-2xl font-black text-emerald-500">{stats.healthStats.passed}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Success</p>
+                   <p className="text-3xl font-black text-emerald-500">{stats.healthStats.passed}</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Success</p>
                  </div>
                  <button 
                   onClick={() => navigate('/healthkpi')}
@@ -487,14 +487,14 @@ export default function DashboardOverview() {
               <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
                 <TrendingUp size={24} className="text-sky-500"/> Executive Master Table
               </h3>
-              <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-1">Total Consolidated Database ({stats.totalKPIs} Measures)</p>
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">Total Consolidated Database ({stats.totalKPIs} Measures)</p>
            </div>
            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-slate-400 uppercase">Search KPI:</span>
+              <span className="text-sm font-bold text-slate-400 uppercase">Search KPI:</span>
               <input 
                 type="text"
                 placeholder="ค้นหาชื่อตัวชี้วัด..."
-                className="h-11 w-64 bg-white border border-slate-200 rounded-2xl px-4 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all shadow-inner shadow-slate-50 placeholder:text-slate-300"
+                className="h-12 w-72 bg-white border border-slate-200 rounded-2xl px-4 py-2 text-base font-bold text-slate-700 outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all shadow-inner shadow-slate-50 placeholder:text-slate-300"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -505,11 +505,11 @@ export default function DashboardOverview() {
           <table className="w-full text-left border-collapse border-spacing-0">
             <thead>
               <tr className="bg-white border-b border-slate-100">
-                <th className="py-5 px-8 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">System</th>
-                <th className="py-5 px-8 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] w-1/3">Indicator Nomenclature</th>
-                <th className="py-5 px-8 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] text-right">Target</th>
-                <th className="py-5 px-8 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] text-right">Perform.</th>
-                <th className="py-5 px-8 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] text-center">Executive Status</th>
+                <th className="py-5 px-8 text-slate-400 font-black text-xs uppercase tracking-[0.2em]">System</th>
+                <th className="py-5 px-8 text-slate-400 font-black text-xs uppercase tracking-[0.2em] w-1/3">Indicator Name</th>
+                <th className="py-5 px-8 text-slate-400 font-black text-xs uppercase tracking-[0.2em] text-right">Target</th>
+                <th className="py-5 px-8 text-slate-400 font-black text-xs uppercase tracking-[0.2em] text-right">Perform.</th>
+                <th className="py-5 px-8 text-slate-400 font-black text-xs uppercase tracking-[0.2em] text-center">Executive Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 bg-white">
@@ -534,32 +534,32 @@ export default function DashboardOverview() {
                 return (
                 <tr key={index} className="hover:bg-slate-50/50 transition-all group">
                   <td className="py-6 px-8 align-middle">
-                    <span className={`text-[9px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest ${kpi.system === 'SDGs' ? 'bg-sky-100/50 text-sky-700' : 'bg-emerald-100/50 text-emerald-700'} border border-transparent group-hover:border-current transition-colors`}>
+                    <span className={`text-[10px] sm:text-xs font-black px-4 py-2 rounded-xl uppercase tracking-widest ${kpi.system === 'SDGs' ? 'bg-sky-100/50 text-sky-700' : 'bg-emerald-100/50 text-emerald-700'} border border-transparent group-hover:border-current transition-colors`}>
                       {kpi.system}
                     </span>
                   </td>
                   
                   <td className="py-6 px-8 align-middle">
-                    <p className="text-sm font-black text-slate-700 group-hover:text-slate-900 transition-colors cursor-default" title={kpi.title}>{kpi.title}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5 flex items-center gap-2 italic">
+                    <p className="text-base font-black text-slate-700 group-hover:text-slate-900 transition-colors cursor-default leading-tight" title={kpi.title}>{kpi.title}</p>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1.5 flex items-center gap-2 italic">
                        {kpi.category}
                     </p>
                   </td>
 
                   <td className="py-6 px-8 align-middle text-right border-none">
-                    <span className="font-bold text-slate-500 text-xs">{kpi.target || 'N/A'}</span>
+                    <span className="font-bold text-slate-500 text-sm">{kpi.target || 'N/A'}</span>
                   </td>
 
                   <td className="py-6 px-8 align-middle text-right border-none">
-                    <span className={`font-black text-lg tabular-nums tracking-tighter ${kpi.performance ? 'text-slate-800' : 'text-slate-300'}`}>
+                    <span className={`font-black text-2xl tabular-nums tracking-tighter ${kpi.performance ? 'text-slate-800' : 'text-slate-300'}`}>
                       {kpi.performance || '--'}
                     </span>
                   </td>
 
                   <td className="py-6 px-8 align-middle border-none">
-                    <div className={`flex items-center justify-center gap-3 px-4 py-2.5 rounded-2xl ${statusBg} border border-white group-hover:shadow-sm transition-all`}>
-                      <StatusIcon size={16} className={statusText} />
-                      <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${statusText}`}>{statusLabel}</span>
+                    <div className={`flex items-center justify-center gap-3 px-5 py-3 rounded-2xl ${statusBg} border border-white group-hover:shadow-sm transition-all`}>
+                      <StatusIcon size={20} className={statusText} />
+                      <span className={`text-xs font-black uppercase tracking-[0.15em] ${statusText}`}>{statusLabel}</span>
                     </div>
                   </td>
                 </tr>
@@ -570,7 +570,7 @@ export default function DashboardOverview() {
         
         {/* Table Footer / Info */}
         <div className="p-6 bg-slate-50 border-t border-slate-100 text-center">
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">© 2026 Strategy and Planning Department Dashboard System</p>
+           <p className="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">© 2026 Strategy and Planning Department Dashboard System</p>
         </div>
       </div>
     </div>
