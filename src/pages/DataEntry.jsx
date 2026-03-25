@@ -29,17 +29,20 @@ export default function DataEntry() {
     setLoading(true);
 
     try {
-      // New Unified Script URL
-      const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+      const isProd = import.meta.env.PROD;
+      const targetUrl = isProd ? '/api/kpi' : import.meta.env.VITE_GOOGLE_SCRIPT_URL;
       
-      const response = await fetch(GOOGLE_SCRIPT_URL, {
+      const fetchOptions = {
         method: 'POST',
-        mode: 'no-cors',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ ...formData, sheetName: 'SDGs' }) 
-      });
+      };
+      
+      if (!isProd) fetchOptions.mode = 'no-cors';
+      
+      const response = await fetch(targetUrl, fetchOptions);
 
       setShowSuccessModal(true);
       

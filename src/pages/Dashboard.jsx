@@ -3,10 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2, Activity, Target, CheckCircle, AlertTriangle, MoreHorizontal } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
-const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+const getApiUrl = (query = '') => import.meta.env.PROD ? `/api/kpi${query}` : `${import.meta.env.VITE_GOOGLE_SCRIPT_URL}${query}`;
 
 const fetchAllData = async () => {
-  const res = await fetch(GOOGLE_SCRIPT_URL);
+  const res = await fetch(getApiUrl('?sheet=SDGs'));
   if (!res.ok) throw new Error('Failed to fetch data');
   return res.json();
 };

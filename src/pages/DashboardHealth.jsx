@@ -4,10 +4,10 @@ import { Loader2, Activity, Target, CheckCircle2, XCircle, AlertTriangle, Users,
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell, PieChart as RePieChart, Pie } from 'recharts';
 import ThailandMap from '../components/charts/ThailandMap';
 
-const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+const getApiUrl = (query = '') => import.meta.env.PROD ? `/api/kpi${query}` : `${import.meta.env.VITE_GOOGLE_SCRIPT_URL}${query}`;
 
 const fetchHealthData = async () => {
-  const res = await fetch(`${GOOGLE_SCRIPT_URL}?sheet=Health_KPI`);
+  const res = await fetch(getApiUrl('?sheet=Health_KPI'));
   if (!res.ok) throw new Error('Failed to fetch data');
   return res.json();
 };

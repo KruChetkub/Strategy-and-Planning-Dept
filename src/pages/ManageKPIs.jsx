@@ -38,17 +38,21 @@ export default function ManageKPIs() {
     setSuccessCount(0);
 
     try {
-      const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+      const isProd = import.meta.env.PROD;
+      const targetUrl = isProd ? '/api/kpi' : import.meta.env.VITE_GOOGLE_SCRIPT_URL;
       
-      // ส่งข้อมูลทั้ง Array ไปทีเดียว
-      await fetch(GOOGLE_SCRIPT_URL, {
+      const fetchOptions = {
         method: 'POST',
-        mode: 'no-cors',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(parsedData)
-      });
+      };
+      
+      if (!isProd) fetchOptions.mode = 'no-cors';
+
+      // ส่งข้อมูลทั้ง Array ไปทีเดียว
+      await fetch(targetUrl, fetchOptions);
 
       setSuccessCount(parsedData.length);
       setPastedData(''); // ล้างหน้าจอ

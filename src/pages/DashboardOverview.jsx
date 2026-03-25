@@ -4,12 +4,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2, Activity, Target, CheckCircle2, AlertOctagon, TrendingUp, PieChart as PieIcon, XCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 
-const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+const getApiUrl = (query = '') => import.meta.env.PROD ? `/api/kpi${query}` : `${import.meta.env.VITE_GOOGLE_SCRIPT_URL}${query}`;
 
 const fetchAllDashboards = async () => {
   const [resSdgs, resHealth] = await Promise.all([
-    fetch(`${GOOGLE_SCRIPT_URL}?sheet=SDGs`),
-    fetch(`${GOOGLE_SCRIPT_URL}?sheet=Health_KPI`)
+    fetch(getApiUrl('?sheet=SDGs')),
+    fetch(getApiUrl('?sheet=Health_KPI'))
   ]);
   
   if (!resSdgs.ok || !resHealth.ok) throw new Error('Failed to fetch data');

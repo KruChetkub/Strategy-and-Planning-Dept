@@ -28,16 +28,19 @@ export default function DataEntryHealth() {
     e.preventDefault();
     setLoading(true);
 
-    // Unified Script URL for Health KPI
-    const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+    const isProd = import.meta.env.PROD;
+    const targetUrl = isProd ? '/api/kpi' : import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
     try {
-      await fetch(GOOGLE_SCRIPT_URL, {
+      const fetchOptions = {
         method: 'POST',
-        mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, sheetName: 'Health_KPI' })
-      });
+      };
+      
+      if (!isProd) fetchOptions.mode = 'no-cors';
+
+      await fetch(targetUrl, fetchOptions);
 
       setShowSuccessModal(true);
       
