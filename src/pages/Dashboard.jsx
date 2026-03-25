@@ -367,7 +367,7 @@ export default function Dashboard({ categoryFilter }) {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider">No. / รหัส</th>
+                  <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider w-32 border-r border-slate-100/50">No. / รหัส</th>
                   <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider w-1/4">หมวดหมู่ / ตัวชี้วัด</th>
                   <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider text-right">เป้าหมาย (2573)</th>
                   <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider text-right">ผลงาน</th>
@@ -380,9 +380,16 @@ export default function Dashboard({ categoryFilter }) {
                 {dashboardData.map((kpi, index) => (
                   <tr key={kpi.id} className="hover:bg-sky-50/50 transition-colors group">
                     <td className="py-4 px-6 align-top">
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-1.5 w-full">
                         <span className="text-slate-500 font-bold text-base">#{index + 1}</span>
-                        {kpi.code ? <span className="text-xs font-bold px-3 py-1 rounded-lg bg-slate-100 text-slate-500 w-fit">{kpi.code}</span> : null}
+                        {kpi.code ? (
+                          <span 
+                            className="text-[11px] font-bold px-2 py-1.5 rounded-md bg-white border border-slate-200 text-slate-600 line-clamp-2 hover:bg-slate-100 hover:text-sky-700 cursor-help transition-all shadow-sm leading-tight break-words" 
+                            title={kpi.code}
+                          >
+                            {kpi.code.match(/^เป้าหมาย\s*[0-9.]+/)?.[0] || kpi.code}
+                          </span>
+                        ) : null}
                       </div>
                     </td>
                     
