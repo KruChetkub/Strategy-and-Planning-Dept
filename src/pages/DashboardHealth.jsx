@@ -618,8 +618,8 @@ export default function DashboardHealth() {
                         </RePieChart>
                       </ResponsiveContainer>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                         <p className="text-4xl font-black text-white drop-shadow-lg">{categoryStats.totalKPIs}</p>
-                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Total KPIs</p>
+                         <p className="text-4xl font-black text-slate-800">{categoryStats.totalKPIs}</p>
+                         <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Total KPIs</p>
                       </div>
                    </div>
                    <div className="flex gap-4 mt-4 flex-wrap justify-center w-full">
