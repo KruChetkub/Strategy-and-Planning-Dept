@@ -275,16 +275,16 @@ export default function Dashboard({ categoryFilter }) {
             </svg>
             
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-5xl font-black text-slate-800 tracking-tighter">
+              <span className="text-6xl font-black text-slate-800 tracking-tighter">
                 {Math.round((passed/dashboardData.length)*100) || 0}%
               </span>
-              <span className="text-[10px] font-extrabold text-sky-600 uppercase tracking-[0.2em] mt-1">
+              <span className="text-xs font-extrabold text-sky-600 uppercase tracking-[0.2em] mt-2">
                 Completed
               </span>
             </div>
           </div>
 
-          <p className="text-slate-500 font-medium text-xs mt-6 text-center max-w-[200px]">
+          <p className="text-slate-500 font-bold text-sm mt-6 text-center max-w-[200px]">
             จากทั้งหมด {dashboardData.length} ตัวชี้วัด <br/> บรรลุเป้าหมายไปแล้ว {passed} ข้อ
           </p>
         </div>
@@ -301,9 +301,9 @@ export default function Dashboard({ categoryFilter }) {
               <CheckCircle className="text-emerald-500" size={28} />
             </div>
             <div>
-              <p className="text-2xl font-black text-slate-800 tracking-tight">{pieData.find(d => d.name.includes('บรรลุ'))?.value || 0}</p>
-              <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">บรรลุเป้าหมาย</p>
-              <p className="text-[10px] text-slate-400 font-medium mt-1">สถานะปกติ (ร้อยละ 100)</p>
+              <p className="text-3xl font-black text-slate-800 tracking-tight">{pieData.find(d => d.name.includes('บรรลุ'))?.value || 0}</p>
+              <p className="text-sm font-bold text-emerald-600 uppercase tracking-widest mt-1">บรรลุเป้าหมาย</p>
+              <p className="text-xs text-slate-400 font-medium mt-1">สถานะปกติ (ร้อยละ 100)</p>
             </div>
           </div>
 
@@ -316,9 +316,9 @@ export default function Dashboard({ categoryFilter }) {
               <Activity className="text-yellow-500" size={28} />
             </div>
             <div>
-              <p className="text-2xl font-black text-slate-800 tracking-tight">{pieData.find(d => d.name.includes('75'))?.value || 0}</p>
-              <p className="text-xs font-bold text-yellow-600 uppercase tracking-widest">ต่ำกว่าเป้าหมาย</p>
-              <p className="text-[10px] text-slate-400 font-medium mt-1">ใกล้เป้า (ร้อยละ 75-99)</p>
+              <p className="text-3xl font-black text-slate-800 tracking-tight">{pieData.find(d => d.name.includes('75'))?.value || 0}</p>
+              <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1">ต่ำกว่าเป้าหมาย</p>
+              <p className="text-xs text-slate-400 font-medium mt-1">ใกล้เป้า (ร้อยละ 75-99)</p>
             </div>
           </div>
 
@@ -331,9 +331,9 @@ export default function Dashboard({ categoryFilter }) {
               <AlertTriangle className="text-orange-500" size={28} />
             </div>
             <div>
-              <p className="text-2xl font-black text-slate-800 tracking-tight">{pieData.find(d => d.name.includes('ระดับเสี่ยง'))?.value || 0}</p>
-              <p className="text-xs font-bold text-orange-600 uppercase tracking-widest">ระดับเสี่ยง</p>
-              <p className="text-[10px] text-slate-400 font-medium mt-1">เตือนภัย (ร้อยละ 50-74)</p>
+              <p className="text-3xl font-black text-slate-800 tracking-tight">{pieData.find(d => d.name.includes('ระดับเสี่ยง'))?.value || 0}</p>
+              <p className="text-sm font-bold text-orange-600 uppercase tracking-widest mt-1">ระดับเสี่ยง</p>
+              <p className="text-xs text-slate-400 font-medium mt-1">เตือนภัย (ร้อยละ 50-74)</p>
             </div>
           </div>
 
@@ -346,9 +346,9 @@ export default function Dashboard({ categoryFilter }) {
               <AlertTriangle className="text-rose-500" size={28} />
             </div>
             <div>
-              <p className="text-2xl font-black text-slate-800 tracking-tight">{pieData.find(d => d.name.includes('วิกฤติ'))?.value || 0}</p>
-              <p className="text-xs font-bold text-rose-600 uppercase tracking-widest">ขั้นวิกฤติ</p>
-              <p className="text-[10px] text-slate-400 font-medium mt-1">ต้องแก้ไข (น้อยกว่าร้อยละ 50)</p>
+              <p className="text-3xl font-black text-slate-800 tracking-tight">{pieData.find(d => d.name.includes('วิกฤติ'))?.value || 0}</p>
+              <p className="text-sm font-bold text-rose-600 uppercase tracking-widest mt-1">ขั้นวิกฤติ</p>
+              <p className="text-xs text-slate-400 font-medium mt-1">ต้องแก้ไข (น้อยกว่าร้อยละ 50)</p>
             </div>
           </div>
 
@@ -381,29 +381,29 @@ export default function Dashboard({ categoryFilter }) {
                   <tr key={kpi.id} className="hover:bg-sky-50/50 transition-colors group">
                     <td className="py-4 px-6 align-top">
                       <div className="flex flex-col gap-1">
-                        <span className="text-slate-500 font-bold text-sm">#{index + 1}</span>
-                        {kpi.code ? <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-500 w-fit">{kpi.code}</span> : null}
+                        <span className="text-slate-500 font-bold text-base">#{index + 1}</span>
+                        {kpi.code ? <span className="text-xs font-bold px-3 py-1 rounded-lg bg-slate-100 text-slate-500 w-fit">{kpi.code}</span> : null}
                       </div>
                     </td>
                     
                     <td className="py-4 px-6 align-top">
-                      <p className="text-xs font-bold text-sky-600 mb-1">{kpi.category}</p>
-                      <p className="text-sm font-bold text-slate-800 line-clamp-3 leading-relaxed" title={kpi.title}>{kpi.title}</p>
+                      <p className="text-sm font-bold text-sky-600 mb-1">{kpi.category}</p>
+                      <p className="text-base font-bold text-slate-800 line-clamp-3 leading-relaxed" title={kpi.title}>{kpi.title}</p>
                     </td>
 
                     <td className="py-4 px-6 align-top text-right">
-                      <span className="font-black text-slate-700">{kpi.target_value || '-'}</span>
+                      <span className="font-black text-slate-700 text-sm">{kpi.target_value || '-'}</span>
                     </td>
 
                     <td className="py-4 px-6 align-top text-right">
-                      <span className={`font-black text-lg ${(kpi.current_value !== null && kpi.current_value !== undefined && kpi.current_value !== '') ? 'text-sky-600' : 'text-slate-300'}`}>
+                      <span className={`font-black text-xl ${(kpi.current_value !== null && kpi.current_value !== undefined && kpi.current_value !== '') ? 'text-sky-600' : 'text-slate-300'}`}>
                         {(kpi.current_value !== null && kpi.current_value !== undefined && kpi.current_value !== '') ? kpi.current_value : '-'}
                       </span>
                     </td>
 
                     <td className="py-4 px-6 align-top">
                       <div className="flex flex-col items-center gap-2">
-                        <span className={`text-[9px] font-extrabold px-2 py-1 rounded-full border ${kpi.status_info.border} ${kpi.status_info.color} uppercase tracking-widest bg-white w-full text-center truncate`}>
+                        <span className={`text-[11px] font-black px-3 py-1.5 rounded-full border ${kpi.status_info.border} ${kpi.status_info.color} uppercase tracking-widest bg-white w-full text-center truncate shadow-sm`}>
                           {kpi.status_info.text}
                         </span>
                         
