@@ -2,13 +2,18 @@ import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, Activity, Target, CheckCircle, AlertTriangle, MoreHorizontal } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { supabase } from '../lib/supabase';
 
-const getApiUrl = (query = '') => import.meta.env.PROD ? `/api/kpi${query}` : `${import.meta.env.VITE_GOOGLE_SCRIPT_URL}${query}`;
+
 
 const fetchAllData = async () => {
-  const res = await fetch(getApiUrl('?sheet=SDGs'));
-  if (!res.ok) throw new Error('Failed to fetch data');
-  return res.json();
+  const { data, error } = await supabase
+    .from('sdg_indicators')
+    .select('*')
+    .order('indicator_name', { ascending: true });
+    
+  if (error) throw error;
+  return data;
 };
 
 const evaluateStatus = (current, target) => {
@@ -106,22 +111,21 @@ export default function Dashboard({ categoryFilter }) {
   const dashboardData = useMemo(() => {
     if (!data) return [];
     
-    let mapped = data.map((row, idx) => {
-      // ดึงข้อมูลโดยรองรับทั้งชื่อคอลัมน์ภาษาอังกฤษและภาษาไทย
-      const currentPerformance = row.currentPerformance ?? row['ผลการดำเนินงานปัจจุบัน (68)'] ?? row['ผลการดำเนินงานปัจจุบัน'] ?? '';
-      const target2030 = row.target2030 ?? row['เป้าหมาย SDG ปี 2573'] ?? row['เป้าหมายปี 2573'] ?? '';
-      const category = row.category ?? row['หมวดหมู่ตัวชี้วัดหลัก'] ?? 'ไม่ได้ระบุหมวดหมู่';
-      const subTarget = String(row.subTarget ?? row['เป้าหมายย่อยที่'] ?? '').trim();
-      const indicatorName = row.indicatorName ?? row['ชื่อตัวชี้วัด'] ?? '';
-      const unit = row.unit ?? row['หน่วยวัด'] ?? '';
-      const agency = row.agency ?? row['หน่วยงานที่รับผิดชอบ'] ?? '';
-      const year = row.year ?? row['ปีที่รายงาน'] ?? '';
-      const note = row.note ?? row['หมายเหตุ'] ?? '';
+    let mapped = data.map((row) => {
+      const currentPerformance = row.current_performance;
+      const target2030 = row.target_2030;
+      const category = 'SDGs'; // Default goal
+      const subTarget = row.category || '';
+      const indicatorName = row.indicator_name;
+      const unit = ''; // Units not in new schema yet
+      const agency = ''; // Agency not in new schema yet
+      const year = '2568';
+      const note = row.description || '';
 
       const status = evaluateStatus(currentPerformance, target2030);
       
       return {
-        id: idx,
+        id: row.id,
         category: category,
         code: subTarget ? `เป้าหมาย ${subTarget}` : '',
         title: indicatorName,

@@ -1,60 +1,49 @@
 import { supabase } from '../lib/supabase';
 
-// Fetch all KPIs with their latest targets
-export async function fetchKPIs(year) {
+// Fetch all SDG indicators
+export async function fetchSDGIndicators() {
   const { data, error } = await supabase
-    .from('kpis')
-    .select(`
-      *,
-      kpi_targets(target_value, target_type, note)
-    `)
-    .eq('is_active', true);
-  
-  if (error) throw error;
-  
-  // Clean up data structure
-  return data.map(kpi => {
-    const targetInfo = kpi.kpi_targets?.find(t => true) || {}; // Take first target
-    return {
-      ...kpi,
-      target_value: targetInfo.target_value,
-      target_type: targetInfo.target_type,
-      target_note: targetInfo.note
-    };
-  });
-}
-
-// Fetch KPI Results for a specific year and quarter
-export async function fetchKPIResults(year, quarter) {
-  let query = supabase
-    .from('kpi_results')
+    .from('sdg_indicators')
     .select('*')
-    .eq('fiscal_year', year);
-    
-  if (quarter !== 'YEAR') {
-    query = query.eq('quarter', quarter);
-  }
-
-  const { data, error } = await query;
+    .order('indicator_name', { ascending: true });
+  
   if (error) throw error;
   return data;
 }
 
-// Helper to determine status color based on direction
-export function getStatusColor(value, target, direction = 'higher_is_better') {
-  if (value === null || value === undefined || target === null || target === undefined) {
-    return { color: 'bg-slate-100 text-slate-500 border-slate-200', text: 'N/A' };
-  }
-
-  const ratio = (value / target) * 100;
+// Fetch all Health KPI indicators (aggregated or specific)
+export async function fetchHealthIndicators() {
+  const { data, error } = await supabase
+    .from('health_indicators')
+    .select('*')
+    .order('indicator_name', { ascending: true });
   
-  if (direction === 'lower_is_better') {
-    if (value <= target) return { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', text: 'ผ่าน' };
-    if (ratio <= 120) return { color: 'bg-amber-100 text-amber-700 border-amber-200', text: 'เสี่ยง' }; // Within 20% over target
-    return { color: 'bg-rose-100 text-rose-700 border-rose-200', text: 'ไม่ผ่าน' };
-  } else {
-    if (ratio >= 100) return { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', text: 'ผ่าน' };
-    if (ratio >= 80) return { color: 'bg-amber-100 text-amber-700 border-amber-200', text: 'เสี่ยง' };
-    return { color: 'bg-rose-100 text-rose-700 border-rose-200', text: 'ไม่ผ่าน' };
+  if (error) throw error;
+  return data;
+}
+
+// Helper: Evaluate status based on performance and target string
+export function evaluateKPIStatus(current, targetString) {
+  if (current === '' || current === null || current === undefined) {
+    return { color: 'text-slate-400', raw: 'pending', text: 'N/A' };
   }
+  
+  const curVal = parseFloat(current);
+  const tStr = String(targetString || '').toLowerCase();
+  
+  const match = tStr.match(/([\d.]+)/);
+  if (!match) return { color: 'text-slate-400', raw: 'pending', text: 'N/A' };
+  
+  const targetVal = parseFloat(match[1]);
+  if (isNaN(curVal) || isNaN(targetVal) || targetVal === 0) {
+    return { color: 'text-slate-400', raw: 'pending', text: 'N/A' };
+  }
+  
+  const isLowerBetter = tStr.includes('<') || tStr.includes('≤') || tStr.includes('ลด');
+  let percentage = isLowerBetter ? (curVal === 0 ? 100 : (targetVal / curVal) * 100) : (curVal / targetVal) * 100;
+  
+  if (percentage >= 100) return { color: 'text-emerald-400', raw: 'passed_100', text: 'บรรลุเป้าหมาย' };
+  if (percentage >= 75) return { color: 'text-yellow-400', raw: 'failed_75', text: 'เฝ้าระวัง' };
+  if (percentage >= 50) return { color: 'text-orange-400', raw: 'failed_50', text: 'เสี่ยง' };
+  return { color: 'text-rose-500', raw: 'failed_0', text: 'วิกฤติ' };
 }

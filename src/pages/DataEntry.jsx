@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileSpreadsheet, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function DataEntry() {
   const [loading, setLoading] = useState(false);
@@ -29,20 +30,17 @@ export default function DataEntry() {
     setLoading(true);
 
     try {
-      const isProd = import.meta.env.PROD;
-      const targetUrl = isProd ? '/api/kpi' : import.meta.env.VITE_GOOGLE_SCRIPT_URL;
-      
-      const fetchOptions = {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...formData, sheetName: 'SDGs' }) 
-      };
-      
-      if (!isProd) fetchOptions.mode = 'no-cors';
-      
-      const response = await fetch(targetUrl, fetchOptions);
+      const { error: insertError } = await supabase
+        .from('sdg_indicators')
+        .insert([{
+          indicator_name: formData.indicatorName,
+          category: formData.subTarget,
+          target_2030: formData.target2030,
+          current_performance: parseFloat(formData.currentPerformance) || 0,
+          description: formData.note
+        }]);
+
+      if (insertError) throw insertError;
 
       setShowSuccessModal(true);
       
@@ -54,7 +52,7 @@ export default function DataEntry() {
 
     } catch (error) {
       console.error(error);
-      setError('เกิดข้อผิดพลาดในการเชื่อมต่อกรุณาลองใหม่อีกครั้ง');
+      setError(error.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อกรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
     }

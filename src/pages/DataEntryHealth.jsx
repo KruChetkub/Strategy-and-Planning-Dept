@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Activity, Loader2, Target, CheckCircle2, XCircle, Save } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function DataEntryHealth() {
   const [loading, setLoading] = useState(false);
@@ -28,19 +29,23 @@ export default function DataEntryHealth() {
     e.preventDefault();
     setLoading(true);
 
-    const isProd = import.meta.env.PROD;
-    const targetUrl = isProd ? '/api/kpi' : import.meta.env.VITE_GOOGLE_SCRIPT_URL;
-
     try {
-      const fetchOptions = {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, sheetName: 'Health_KPI' })
-      };
-      
-      if (!isProd) fetchOptions.mode = 'no-cors';
+      const { error: insertError } = await supabase
+        .from('health_indicators')
+        .insert([{
+          indicator_name: formData.indicatorName,
+          kpi_group: formData.subIndicatorName, // Mapping subIndicatorName to kpi_group for categorization
+          region: formData.region,
+          a_value: parseFloat(formData.A) || 0,
+          b_value: parseFloat(formData.B) || 0,
+          performance: parseFloat(formData.performance) || 0,
+          target_q1: formData.targetQ1,
+          target_q2: formData.targetQ2,
+          target_q3: formData.targetQ3,
+          target_q4: formData.targetQ4
+        }]);
 
-      await fetch(targetUrl, fetchOptions);
+      if (insertError) throw insertError;
 
       setShowSuccessModal(true);
       
@@ -64,7 +69,7 @@ export default function DataEntryHealth() {
 
     } catch (error) {
       console.error(error);
-      setError('เกิดข้อผิดพลาดในการเชื่อมต่อกรุณาลองใหม่อีกครั้ง');
+      setError(error.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อกรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
     }

@@ -3,13 +3,18 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2, Activity, Target, CheckCircle2, XCircle, AlertTriangle, Users, Calendar, Filter, Download, FileText, MapPin, PieChart } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell, PieChart as RePieChart, Pie } from 'recharts';
 import ThailandMap from '../components/charts/ThailandMap';
+import { supabase } from '../lib/supabase';
 
-const getApiUrl = (query = '') => import.meta.env.PROD ? `/api/kpi${query}` : `${import.meta.env.VITE_GOOGLE_SCRIPT_URL}${query}`;
+
 
 const fetchHealthData = async () => {
-  const res = await fetch(getApiUrl('?sheet=Health_KPI'));
-  if (!res.ok) throw new Error('Failed to fetch data');
-  return res.json();
+  const { data, error } = await supabase
+    .from('health_indicators')
+    .select('*')
+    .order('indicator_name', { ascending: true });
+    
+  if (error) throw error;
+  return data;
 };
 
 const getCurrentQuarter = () => {
@@ -89,40 +94,38 @@ export default function DashboardHealth() {
   const rawMappedData = useMemo(() => {
     if (!data) return [];
     
-    let mapped = data.map((row, idx) => {
-      const indicatorName = row.indicatorName ?? row['ชื่อตัวชี้วัด'] ?? 'ไม่ระบุ';
-      const subIndicatorName = row.subIndicatorName ?? row['ชื่อตัวชี้วัดย่อย'] ?? '';
-      const region = row.region ?? row['เขตฯ'] ?? row['เขต'] ?? row['เขตสุขภาพ'] ?? 'ไม่ได้ระบุเขต';
+    let mapped = data.map((row) => {
+      const indicatorName = row.indicator_name || 'ไม่ระบุ';
+      const subIndicatorName = row.kpi_group || '';
+      const region = row.region || 'ไม่ได้ระบุเขต';
       
       const targetMap = { 
-        targetQ1: row.targetQ1 ?? row['เป้าหมาย Q1'] ?? '', 
-        targetQ2: row.targetQ2 ?? row['เป้าหมาย Q2'] ?? '', 
-        targetQ3: row.targetQ3 ?? row['เป้าหมาย Q3'] ?? '', 
-        targetQ4: row.targetQ4 ?? row['เป้าหมาย Q4'] ?? '' 
+        targetQ1: row.target_q1 || '', 
+        targetQ2: row.target_q2 || '', 
+        targetQ3: row.target_q3 || '', 
+        targetQ4: row.target_q4 || '' 
       };
       const currentQuarterTarget = targetMap[currentQ.targetKey];
-      const valA = row.A ?? row['A'] ?? undefined;
-      const valB = row.B ?? row['B'] ?? undefined;
-      const valRawPerf = row.performance ?? row['ผลงาน'] ?? row['ผลงาน (ร้อยละ)'] ?? undefined;
+      const valA = row.a_value;
+      const valB = row.b_value;
+      const valRawPerf = row.performance;
       
-      const cleanA = parseFloat(String(valA || 0).replace(/,/g, '')) || 0;
-      const cleanB = parseFloat(String(valB || 0).replace(/,/g, '')) || 0;
+      const cleanA = parseFloat(valA) || 0;
+      const cleanB = parseFloat(valB) || 0;
       
       let calcPerf = null;
-      if (valRawPerf !== undefined && valRawPerf !== '' && !isNaN(parseFloat(valRawPerf))) {
+      if (valRawPerf !== null && valRawPerf !== undefined && valRawPerf !== '') {
          calcPerf = parseFloat(valRawPerf).toFixed(2);
-      } else if (valB !== undefined && cleanB > 0) {
+      } else if (cleanB > 0) {
          calcPerf = ((cleanA / cleanB) * 100).toFixed(2);
-      } else if (valA !== undefined || valB !== undefined || valRawPerf !== undefined) {
-         // User explicitly entered something (like A=0, B=0)
-         if (valRawPerf === '0' || valRawPerf === 0) calcPerf = '0.00';
-         else if (valA !== undefined && valB !== undefined) calcPerf = '0.00'; 
+      } else if (valA !== null || valB !== null || valRawPerf !== null) {
+         calcPerf = '0.00';
       }
 
       const status = evaluateStatus(calcPerf !== null ? calcPerf : '', currentQuarterTarget);
       
       return {
-        id: idx,
+        id: row.id,
         region: region,
         title: indicatorName,
         subtitle: subIndicatorName,

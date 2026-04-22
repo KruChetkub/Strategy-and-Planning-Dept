@@ -3,18 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, Activity, Target, CheckCircle2, AlertOctagon, TrendingUp, PieChart as PieIcon, XCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
-
-const getApiUrl = (query = '') => import.meta.env.PROD ? `/api/kpi${query}` : `${import.meta.env.VITE_GOOGLE_SCRIPT_URL}${query}`;
+import { supabase } from '../lib/supabase';
 
 const fetchAllDashboards = async () => {
   const [resSdgs, resHealth] = await Promise.all([
-    fetch(getApiUrl('?sheet=SDGs')),
-    fetch(getApiUrl('?sheet=Health_KPI'))
+    supabase.from('sdg_indicators').select('*'),
+    supabase.from('health_indicators').select('*')
   ]);
   
-  if (!resSdgs.ok || !resHealth.ok) throw new Error('Failed to fetch data');
+  if (resSdgs.error) throw resSdgs.error;
+  if (resHealth.error) throw resHealth.error;
   
-  return Promise.all([resSdgs.json(), resHealth.json()]);
+  return [resSdgs.data, resHealth.data];
 };
 
 // --- Helpers ---
@@ -91,29 +91,21 @@ export default function DashboardOverview() {
   const { stats, barData } = useMemo(() => {
     if (!data) return { stats: null, barData: [] };
     const [sdgsRaw, healthRaw] = data;
-
     const allIndicators = [];
 
-    // Process SDGs (Grouped by title to prevent duplicates)
-    const sdgsGrouped = new Map();
-    sdgsRaw.forEach(row => {
-      const title = row.indicatorName ?? row['ชื่อตัวชี้วัด'];
-      if (!title || title === 'ไม่ระบุ') return;
-      if (!sdgsGrouped.has(title)) sdgsGrouped.set(title, row);
-    });
-
-    const sdgsStats = { passed: 0, warning: 0, critical: 0, pending: 0, total: sdgsGrouped.size };
+    const sdgsStats = { passed: 0, warning: 0, critical: 0, pending: 0, total: sdgsRaw.length };
     
-    sdgsGrouped.forEach((row, title) => {
-      const perf = row.currentPerformance ?? row['ผลการดำเนินงานปัจจุบัน (68)'] ?? row['ผลการดำเนินงานปัจจุบัน'] ?? '';
-      const tar = row.target2030 ?? row['เป้าหมาย SDG ปี 2573'] ?? row['เป้าหมายปี 2573'] ?? '';
+    sdgsRaw.forEach((row) => {
+      const title = row.indicator_name;
+      const perf = row.current_performance;
+      const tar = row.target_2030;
       const status = evaluateSDGStatus(perf, tar);
       
       allIndicators.push({
-         id: `sdg-${title}`,
+         id: `sdg-${row.id}`,
          system: 'SDGs',
          title: title,
-         category: row.category ?? row['หมวดหมู่ตัวชี้วัดหลัก'] ?? 'ไม่ระบุ',
+         category: row.category || 'ไม่ระบุ',
          target: tar,
          performance: perf,
          status: status.raw
@@ -130,14 +122,14 @@ export default function DashboardOverview() {
     const healthGrouped = new Map();
     
     healthRaw.forEach(row => {
-      let title = row.indicatorName ?? row['ชื่อตัวชี้วัด'];
+      let title = row.indicator_name;
       if (!title || title === 'ไม่ระบุ') return;
-      if (row.KPI_Type_A) title = `[Health] ${title}`;
+      if (row.is_type_a) title = `[Health] ${title}`;
       
       if (!healthGrouped.has(title)) {
         healthGrouped.set(title, {
           title,
-          category: row.kpi_group ?? row['กลุ่มตัวชี้วัด'] ?? 'ไม่ระบุ',
+          category: row.kpi_group || 'ไม่ระบุ',
           rows: []
         });
       }
@@ -159,23 +151,23 @@ export default function DashboardOverview() {
 
        if (overallRow) {
           const targetMap = { 
-            targetQ1: overallRow.targetQ1 ?? overallRow['เป้าหมาย Q1'], 
-            targetQ2: overallRow.targetQ2 ?? overallRow['เป้าหมาย Q2'], 
-            targetQ3: overallRow.targetQ3 ?? overallRow['เป้าหมาย Q3'], 
-            targetQ4: overallRow.targetQ4 ?? overallRow['เป้าหมาย Q4'] 
+            targetQ1: overallRow.target_q1, 
+            targetQ2: overallRow.target_q2, 
+            targetQ3: overallRow.target_q3, 
+            targetQ4: overallRow.target_q4 
           };
           finalTarget = targetMap[currentQ.targetKey] ?? '';
-          finalPerf = overallRow.performance ?? overallRow['ผลงาน'] ?? overallRow['ผลการดำเนินงาน'] ?? '';
+          finalPerf = overallRow.performance ?? '';
           if (finalPerf !== '') finalStatus = evaluateHealthStatus(finalPerf, finalTarget).raw;
        } else {
           // Fallback: take the first row's target
-          const firstValid = group.rows.find(r => r.targetQ1 || r['เป้าหมาย Q1']);
+          const firstValid = group.rows.find(r => r.target_q1);
           if (firstValid) {
              const targetMap = { 
-                targetQ1: firstValid.targetQ1 ?? firstValid['เป้าหมาย Q1'], 
-                targetQ2: firstValid.targetQ2 ?? firstValid['เป้าหมาย Q2'], 
-                targetQ3: firstValid.targetQ3 ?? firstValid['เป้าหมาย Q3'], 
-                targetQ4: firstValid.targetQ4 ?? firstValid['เป้าหมาย Q4'] 
+                targetQ1: firstValid.target_q1, 
+                targetQ2: firstValid.target_q2, 
+                targetQ3: firstValid.target_q3, 
+                targetQ4: firstValid.target_q4 
              };
              finalTarget = targetMap[currentQ.targetKey] ?? '';
           }
@@ -184,7 +176,7 @@ export default function DashboardOverview() {
           let totalPerf = 0;
           let count = 0;
           group.rows.forEach(r => {
-             const p = parseFloat(r.performance ?? r['ผลงาน'] ?? r['ผลการดำเนินงาน'] ?? '');
+             const p = parseFloat(r.performance);
              if (!isNaN(p)) { totalPerf += p; count++; }
           });
           
