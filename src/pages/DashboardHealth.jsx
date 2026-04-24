@@ -1,15 +1,21 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, Activity, Target, CheckCircle2, XCircle, AlertTriangle, Users, Calendar, Filter, Download, FileText, MapPin, PieChart } from 'lucide-react';
+import { Activity, Target, CheckCircle2, XCircle, AlertTriangle, Users, Calendar, Filter, Download, FileText, MapPin, PieChart } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell, PieChart as RePieChart, Pie } from 'recharts';
 import ThailandMap from '../components/charts/ThailandMap';
+import { supabase } from '../lib/supabase';
 
-const getApiUrl = (query = '') => import.meta.env.PROD ? `/api/kpi${query}` : `${import.meta.env.VITE_GOOGLE_SCRIPT_URL}${query}`;
+
 
 const fetchHealthData = async () => {
-  const res = await fetch(getApiUrl('?sheet=Health_KPI'));
-  if (!res.ok) throw new Error('Failed to fetch data');
-  return res.json();
+  const { data, error } = await supabase
+    .from('health_indicators')
+    .select('*')
+    .eq('is_deleted', false)   // ← กรองรายการที่ถูก Soft Delete ออก
+    .order('indicator_name', { ascending: true });
+    
+  if (error) throw error;
+  return data;
 };
 
 const getCurrentQuarter = () => {
@@ -79,8 +85,8 @@ export default function DashboardHealth() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['healthData'],
     queryFn: fetchHealthData,
-    refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000
+    refetchOnWindowFocus: true,  // ← refresh เมื่อ user กลับมาที่ tab
+    staleTime: 0,                // ← ไม่ cache — ดึงใหม่ทันทีเมื่อ invalidate
   });
 
   const currentQ = useMemo(() => getCurrentQuarter(), []);
@@ -89,40 +95,38 @@ export default function DashboardHealth() {
   const rawMappedData = useMemo(() => {
     if (!data) return [];
     
-    let mapped = data.map((row, idx) => {
-      const indicatorName = row.indicatorName ?? row['ชื่อตัวชี้วัด'] ?? 'ไม่ระบุ';
-      const subIndicatorName = row.subIndicatorName ?? row['ชื่อตัวชี้วัดย่อย'] ?? '';
-      const region = row.region ?? row['เขตฯ'] ?? row['เขต'] ?? row['เขตสุขภาพ'] ?? 'ไม่ได้ระบุเขต';
+    let mapped = data.map((row) => {
+      const indicatorName = row.indicator_name || 'ไม่ระบุ';
+      const subIndicatorName = row.kpi_group || '';
+      const region = row.region || 'ไม่ได้ระบุเขต';
       
       const targetMap = { 
-        targetQ1: row.targetQ1 ?? row['เป้าหมาย Q1'] ?? '', 
-        targetQ2: row.targetQ2 ?? row['เป้าหมาย Q2'] ?? '', 
-        targetQ3: row.targetQ3 ?? row['เป้าหมาย Q3'] ?? '', 
-        targetQ4: row.targetQ4 ?? row['เป้าหมาย Q4'] ?? '' 
+        targetQ1: row.target_q1 || '', 
+        targetQ2: row.target_q2 || '', 
+        targetQ3: row.target_q3 || '', 
+        targetQ4: row.target_q4 || '' 
       };
       const currentQuarterTarget = targetMap[currentQ.targetKey];
-      const valA = row.A ?? row['A'] ?? undefined;
-      const valB = row.B ?? row['B'] ?? undefined;
-      const valRawPerf = row.performance ?? row['ผลงาน'] ?? row['ผลงาน (ร้อยละ)'] ?? undefined;
+      const valA = row.a_value;
+      const valB = row.b_value;
+      const valRawPerf = row.performance;
       
-      const cleanA = parseFloat(String(valA || 0).replace(/,/g, '')) || 0;
-      const cleanB = parseFloat(String(valB || 0).replace(/,/g, '')) || 0;
+      const cleanA = parseFloat(valA) || 0;
+      const cleanB = parseFloat(valB) || 0;
       
       let calcPerf = null;
-      if (valRawPerf !== undefined && valRawPerf !== '' && !isNaN(parseFloat(valRawPerf))) {
+      if (valRawPerf !== null && valRawPerf !== undefined && valRawPerf !== '') {
          calcPerf = parseFloat(valRawPerf).toFixed(2);
-      } else if (valB !== undefined && cleanB > 0) {
+      } else if (cleanB > 0) {
          calcPerf = ((cleanA / cleanB) * 100).toFixed(2);
-      } else if (valA !== undefined || valB !== undefined || valRawPerf !== undefined) {
-         // User explicitly entered something (like A=0, B=0)
-         if (valRawPerf === '0' || valRawPerf === 0) calcPerf = '0.00';
-         else if (valA !== undefined && valB !== undefined) calcPerf = '0.00'; 
+      } else if (valA !== null || valB !== null || valRawPerf !== null) {
+         calcPerf = '0.00';
       }
 
       const status = evaluateStatus(calcPerf !== null ? calcPerf : '', currentQuarterTarget);
       
       return {
-        id: idx,
+        id: row.id,
         region: region,
         title: indicatorName,
         subtitle: subIndicatorName,
@@ -418,9 +422,23 @@ export default function DashboardHealth() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="animate-spin text-emerald-500" size={48} />
-        <p className="text-slate-400 font-medium">กำลังโหลดข้อมูล Health KPI รายเขตฯ...</p>
+      <div className="max-w-[1700px] w-full mx-auto space-y-6 pb-10 animate-pulse">
+        {/* Skeleton Filter Header */}
+        <div className="skeleton h-28 w-full rounded-3xl" />
+        {/* Skeleton Cards Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="skeleton h-28 rounded-3xl" />
+          <div className="skeleton h-28 rounded-3xl" />
+          <div className="skeleton h-28 rounded-3xl" />
+        </div>
+        {/* Skeleton Charts Row */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          <div className="xl:col-span-4 skeleton h-[350px] rounded-3xl" />
+          <div className="xl:col-span-5 skeleton h-[350px] rounded-3xl" />
+          <div className="xl:col-span-3 skeleton h-[350px] rounded-3xl" />
+        </div>
+        {/* Skeleton Table */}
+        <div className="skeleton h-64 w-full rounded-3xl" />
       </div>
     );
   }
@@ -622,11 +640,12 @@ export default function DashboardHealth() {
                          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Total KPIs</p>
                       </div>
                    </div>
-                   <div className="flex gap-4 mt-4 flex-wrap justify-center w-full">
+                   {/* ✅ Legend — Light mode (ไม่ใช้ dark class แล้ว) */}
+                   <div className="flex gap-3 mt-4 flex-wrap justify-center w-full">
                       {categoryStats.statusData.map((s, idx) => (
-                         <div key={idx} className="flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded-lg border border-white/5">
-                            <span className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: s.color, boxShadow: `0 0 8px ${s.color}` }}></span>
-                            <span className="text-xs font-bold text-slate-300">{s.name} ({s.value})</span>
+                         <div key={idx} className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
+                            <span className="text-xs font-bold text-slate-600">{s.name} ({s.value})</span>
                          </div>
                       ))}
                    </div>

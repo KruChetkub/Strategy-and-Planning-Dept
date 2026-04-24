@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileSpreadsheet, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function DataEntry() {
   const [loading, setLoading] = useState(false);
@@ -26,23 +27,19 @@ export default function DataEntry() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setLoading(true);
 
     try {
-      const isProd = import.meta.env.PROD;
-      const targetUrl = isProd ? '/api/kpi' : import.meta.env.VITE_GOOGLE_SCRIPT_URL;
-      
-      const fetchOptions = {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...formData, sheetName: 'SDGs' }) 
-      };
-      
-      if (!isProd) fetchOptions.mode = 'no-cors';
-      
-      const response = await fetch(targetUrl, fetchOptions);
+      const { error: insertError } = await supabase
+        .from('sdg_indicators')
+        .insert([{
+          indicator_name: formData.indicatorName,
+          category: formData.subTarget,
+          target_2030: formData.target2030,
+          current_performance: parseFloat(formData.currentPerformance) || 0,
+          description: formData.note
+        }]);
+
+      if (insertError) throw insertError;
 
       setShowSuccessModal(true);
       
@@ -54,7 +51,7 @@ export default function DataEntry() {
 
     } catch (error) {
       console.error(error);
-      setError('เกิดข้อผิดพลาดในการเชื่อมต่อกรุณาลองใหม่อีกครั้ง');
+      setError(error.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อกรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
     }
@@ -64,7 +61,7 @@ export default function DataEntry() {
   const labelClass = "block text-sm font-bold text-slate-700";
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-10">
+    <div className="max-w-4xl mx-auto space-y-8 pb-10 fade-in-up">
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 flex items-center justify-center">
           <FileSpreadsheet className="text-cyan-400" size={24} />
