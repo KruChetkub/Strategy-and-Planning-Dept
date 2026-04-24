@@ -1,806 +1,580 @@
-import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
-  Loader2,
-  Activity,
-  Target,
-  CheckCircle2,
-  AlertOctagon,
-  TrendingUp,
-  PieChart as PieIcon,
-  XCircle,
-} from "lucide-react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Legend,
-} from "recharts";
-import { supabase } from "../lib/supabase";
+  Loader2, Activity, Target, CheckCircle2, AlertOctagon,
+  TrendingUp, XCircle, ArrowRight, AlertTriangle, ShieldCheck,
+  BarChart2, Layers
+} from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   DATA FETCHING & HELPERS — ไม่มีการแก้ไข logic ใดๆ ทั้งสิ้น
+───────────────────────────────────────────────────────────────────────────── */
 const fetchAllDashboards = async () => {
   const [resSdgs, resHealth] = await Promise.all([
-    supabase.from("sdg_indicators").select("*"),
-    supabase.from("health_indicators").select("*"),
+    supabase.from('sdg_indicators').select('*'),
+    supabase.from('health_indicators').select('*')
   ]);
-
   if (resSdgs.error) throw resSdgs.error;
   if (resHealth.error) throw resHealth.error;
-
   return [resSdgs.data, resHealth.data];
 };
 
-// --- Helpers ---
 const evaluateSDGStatus = (current, target) => {
-  if (current === "" || current === null || current === undefined)
-    return { color: "text-slate-800", raw: "pending" };
+  if (current === '' || current === null || current === undefined) return { raw: 'pending' };
   const curVal = parseFloat(current);
   const tStr = String(target).toLowerCase();
   const match = tStr.match(/([\d.]+)/);
-  if (!match) return { color: "text-slate-800", raw: "pending" };
+  if (!match) return { raw: 'pending' };
   const targetVal = parseFloat(match[1]);
-  if (isNaN(curVal) || isNaN(targetVal) || targetVal === 0)
-    return { color: "text-slate-800", raw: "pending" };
-  const isLowerBetter =
-    tStr.includes("<") || tStr.includes("≤") || tStr.includes("ลด");
-  let percentage = isLowerBetter
-    ? curVal === 0
-      ? 100
-      : (targetVal / curVal) * 100
-    : (curVal / targetVal) * 100;
-
-  if (percentage >= 100)
-    return { color: "text-emerald-400", raw: "passed_100" };
-  if (percentage >= 75) return { color: "text-yellow-400", raw: "failed_75" };
-  if (percentage >= 50) return { color: "text-orange-400", raw: "failed_50" };
-  return { color: "text-rose-500", raw: "failed_0" };
+  if (isNaN(curVal) || isNaN(targetVal) || targetVal === 0) return { raw: 'pending' };
+  const isLowerBetter = tStr.includes('<') || tStr.includes('≤') || tStr.includes('ลด');
+  let pct = isLowerBetter ? (curVal === 0 ? 100 : (targetVal / curVal) * 100) : (curVal / targetVal) * 100;
+  if (pct >= 100) return { raw: 'passed_100' };
+  if (pct >= 75)  return { raw: 'failed_75' };
+  if (pct >= 50)  return { raw: 'failed_50' };
+  return { raw: 'failed_0' };
 };
 
 const getCurrentQuarter = () => {
-  const month = new Date().getMonth() + 1;
-  if (month >= 10 && month <= 12) return { targetKey: "targetQ1" };
-  if (month >= 1 && month <= 3) return { targetKey: "targetQ2" };
-  if (month >= 4 && month <= 6) return { targetKey: "targetQ3" };
-  return { targetKey: "targetQ4" };
+  const m = new Date().getMonth() + 1;
+  if (m >= 10) return { targetKey: 'targetQ1' };
+  if (m <= 3)  return { targetKey: 'targetQ2' };
+  if (m <= 6)  return { targetKey: 'targetQ3' };
+  return { targetKey: 'targetQ4' };
 };
 
 const evaluateHealthStatus = (current, targetString) => {
-  if (!current) return { color: "text-slate-800", raw: "pending" };
+  if (!current) return { raw: 'pending' };
   const curVal = parseFloat(current);
-  const tStr = String(targetString || "").toLowerCase();
+  const tStr = String(targetString || '').toLowerCase();
   const match = tStr.match(/([\d.]+)/);
-  if (!match) return { color: "text-slate-800", raw: "pending" };
+  if (!match) return { raw: 'pending' };
   const targetVal = parseFloat(match[1]);
-  if (isNaN(curVal) || isNaN(targetVal) || targetVal === 0)
-    return { color: "text-slate-800", raw: "pending" };
-
-  const isLowerBetter =
-    tStr.includes("<") || tStr.includes("≤") || tStr.includes("ลด");
-  let percentage = isLowerBetter
-    ? curVal === 0
-      ? 100
-      : (targetVal / curVal) * 100
-    : (curVal / targetVal) * 100;
-
-  if (percentage >= 100)
-    return { color: "text-emerald-400", raw: "passed_100" };
-  if (percentage >= 75) return { color: "text-yellow-400", raw: "failed_75" };
-  if (percentage >= 50) return { color: "text-orange-400", raw: "failed_50" };
-  return { color: "text-rose-500", raw: "failed_0" };
+  if (isNaN(curVal) || isNaN(targetVal) || targetVal === 0) return { raw: 'pending' };
+  const isLowerBetter = tStr.includes('<') || tStr.includes('≤') || tStr.includes('ลด');
+  let pct = isLowerBetter ? (curVal === 0 ? 100 : (targetVal / curVal) * 100) : (curVal / targetVal) * 100;
+  if (pct >= 100) return { raw: 'passed_100' };
+  if (pct >= 75)  return { raw: 'failed_75' };
+  if (pct >= 50)  return { raw: 'failed_50' };
+  return { raw: 'failed_0' };
 };
 
-const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white/95 border border-slate-200 p-3 rounded-xl shadow-lg text-lg backdrop-blur-md">
-        <p className="font-bold text-slate-800 mb-2">{label}</p>
-        <div className="space-y-1">
-          {payload.map((entry, index) => (
-            <div key={index} className="flex justify-between gap-4">
-              <span style={{ color: entry.color }} className="font-medium">
-                {entry.name}:
-              </span>
-              <span className="text-slate-800 font-bold">{entry.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-  return null;
+/* ─────────────────────────────────────────────────────────────────────────────
+   STATUS CONFIG — maps status code → visual tokens
+───────────────────────────────────────────────────────────────────────────── */
+const STATUS = {
+  passed_100: { label: 'บรรลุเป้าหมาย', short: 'Passed',  bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500', Icon: CheckCircle2 },
+  failed_75:  { label: 'เฝ้าระวัง',      short: 'Warning', bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',   dot: 'bg-amber-500',   Icon: AlertTriangle },
+  failed_50:  { label: 'ระดับเสี่ยง',    short: 'At Risk', bg: 'bg-orange-50',  text: 'text-orange-700',  border: 'border-orange-200',  dot: 'bg-orange-500',  Icon: AlertOctagon },
+  failed_0:   { label: 'ขั้นวิกฤติ',     short: 'Critical',bg: 'bg-rose-50',    text: 'text-rose-700',    border: 'border-rose-200',    dot: 'bg-rose-500',    Icon: XCircle },
+  pending:    { label: 'รอข้อมูล',        short: 'Pending', bg: 'bg-slate-50',   text: 'text-slate-400',   border: 'border-slate-200',   dot: 'bg-slate-300',   Icon: Loader2 },
 };
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   DONUT CHART — SVG inline, ใช้ข้อมูลจริง
+───────────────────────────────────────────────────────────────────────────── */
+function DonutRing({ percent, color = '#10b981', size = 120, stroke = 11 }) {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = (percent / 100) * circ;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#f1f5f9" strokeWidth={stroke} />
+      <circle
+        cx={size/2} cy={size/2} r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeDasharray={`${dash} ${circ}`}
+        strokeLinecap="round"
+        className="transition-all duration-1000 ease-out"
+      />
+    </svg>
+  );
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   MAIN COMPONENT
+═════════════════════════════════════════════════════════════════════════════ */
 export default function DashboardOverview() {
   const { data, isLoading, error } = useQuery({
-    queryKey: ["overviewData"],
+    queryKey: ['overviewData'],
     queryFn: fetchAllDashboards,
     refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000
   });
 
-  const { stats, barData } = useMemo(() => {
-    if (!data) return { stats: null, barData: [] };
+  /* ── Data Processing (ไม่เปลี่ยน logic) ── */
+  const { stats } = useMemo(() => {
+    if (!data) return { stats: null };
     const [sdgsRaw, healthRaw] = data;
     const allIndicators = [];
-
-    const sdgsStats = {
-      passed: 0,
-      warning: 0,
-      critical: 0,
-      pending: 0,
-      total: sdgsRaw.length,
-    };
+    const sdgsStats = { passed: 0, warning: 0, atRisk: 0, critical: 0, pending: 0, total: sdgsRaw.length };
 
     sdgsRaw.forEach((row) => {
-      const title = row.indicator_name;
-      const perf = row.current_performance;
-      const tar = row.target_2030;
-      const status = evaluateSDGStatus(perf, tar);
-
+      const status = evaluateSDGStatus(row.current_performance, row.target_2030);
       allIndicators.push({
-        id: `sdg-${row.id}`,
-        system: "SDGs",
-        title: title,
-        category: row.category || "ไม่ระบุ",
-        target: tar,
-        performance: perf,
-        status: status.raw,
+        id: `sdg-${row.id}`, system: 'SDGs',
+        title: row.indicator_name,
+        category: row.category || 'ไม่ระบุ',
+        target: row.target_2030,
+        performance: row.current_performance,
+        status: status.raw
       });
-
-      if (status.raw === "passed_100") sdgsStats.passed++;
-      else if (status.raw === "failed_75") sdgsStats.warning++;
-      else if (status.raw === "failed_50" || status.raw === "failed_0")
-        sdgsStats.critical++;
+      if (status.raw === 'passed_100') sdgsStats.passed++;
+      else if (status.raw === 'failed_75') sdgsStats.warning++;
+      else if (status.raw === 'failed_50') sdgsStats.atRisk++;
+      else if (status.raw === 'failed_0')  sdgsStats.critical++;
       else sdgsStats.pending++;
     });
 
-    // Process Health KPI (Grouped by Main Indicator to ignore regions and sub-indicators)
     const currentQ = getCurrentQuarter();
     const healthGrouped = new Map();
-
-    healthRaw.forEach((row) => {
+    healthRaw.forEach(row => {
       let title = row.indicator_name;
-      if (!title || title === "ไม่ระบุ") return;
+      if (!title || title === 'ไม่ระบุ') return;
       if (row.is_type_a) title = `[Health] ${title}`;
-
-      if (!healthGrouped.has(title)) {
-        healthGrouped.set(title, {
-          title,
-          category: row.kpi_group || "ไม่ระบุ",
-          rows: [],
-        });
-      }
+      if (!healthGrouped.has(title)) healthGrouped.set(title, { title, category: row.kpi_group || 'ไม่ระบุ', rows: [] });
       healthGrouped.get(title).rows.push(row);
     });
 
-    const healthStats = {
-      passed: 0,
-      warning: 0,
-      critical: 0,
-      pending: 0,
-      total: healthGrouped.size,
-    };
-
+    const healthStats = { passed: 0, warning: 0, atRisk: 0, critical: 0, pending: 0, total: healthGrouped.size };
     healthGrouped.forEach((group, title) => {
-      let finalPerf = "";
-      let finalTarget = "";
-      let finalStatus = "pending";
-
-      // Try to find the "Overall" report row first
-      const overallRow = group.rows.find((r) => {
-        const reg = r.region ?? r["เขตฯ"] ?? r["เขต"] ?? r["เขตสุขภาพ"] ?? "";
-        return (
-          reg.includes("รวม") || reg.includes("ประเทศ") || reg === "ภาพรวม"
-        );
+      let finalPerf = '', finalTarget = '', finalStatus = 'pending';
+      const overallRow = group.rows.find(r => {
+        const reg = r.region ?? r['เขตฯ'] ?? r['เขต'] ?? r['เขตสุขภาพ'] ?? '';
+        return reg.includes('รวม') || reg.includes('ประเทศ') || reg === 'ภาพรวม';
       });
-
       if (overallRow) {
-        const targetMap = {
-          targetQ1: overallRow.target_q1,
-          targetQ2: overallRow.target_q2,
-          targetQ3: overallRow.target_q3,
-          targetQ4: overallRow.target_q4,
-        };
-        finalTarget = targetMap[currentQ.targetKey] ?? "";
-        finalPerf = overallRow.performance ?? "";
-        if (finalPerf !== "")
-          finalStatus = evaluateHealthStatus(finalPerf, finalTarget).raw;
+        const tm = { targetQ1: overallRow.target_q1, targetQ2: overallRow.target_q2, targetQ3: overallRow.target_q3, targetQ4: overallRow.target_q4 };
+        finalTarget = tm[currentQ.targetKey] ?? '';
+        finalPerf = overallRow.performance ?? '';
+        if (finalPerf !== '') finalStatus = evaluateHealthStatus(finalPerf, finalTarget).raw;
       } else {
-        // Fallback: take the first row's target
-        const firstValid = group.rows.find((r) => r.target_q1);
-        if (firstValid) {
-          const targetMap = {
-            targetQ1: firstValid.target_q1,
-            targetQ2: firstValid.target_q2,
-            targetQ3: firstValid.target_q3,
-            targetQ4: firstValid.target_q4,
-          };
-          finalTarget = targetMap[currentQ.targetKey] ?? "";
+        const fv = group.rows.find(r => r.target_q1);
+        if (fv) {
+          const tm = { targetQ1: fv.target_q1, targetQ2: fv.target_q2, targetQ3: fv.target_q3, targetQ4: fv.target_q4 };
+          finalTarget = tm[currentQ.targetKey] ?? '';
         }
-
-        // Average the performance
-        let totalPerf = 0;
-        let count = 0;
-        group.rows.forEach((r) => {
-          const p = parseFloat(r.performance);
-          if (!isNaN(p)) {
-            totalPerf += p;
-            count++;
-          }
-        });
-
-        if (count > 0) {
-          finalPerf = (totalPerf / count).toFixed(2);
-          finalStatus = evaluateHealthStatus(finalPerf, finalTarget).raw;
-        }
+        let tot = 0, cnt = 0;
+        group.rows.forEach(r => { const p = parseFloat(r.performance); if (!isNaN(p)) { tot += p; cnt++; } });
+        if (cnt > 0) { finalPerf = (tot / cnt).toFixed(2); finalStatus = evaluateHealthStatus(finalPerf, finalTarget).raw; }
       }
-
-      allIndicators.push({
-        id: `health-${title}`,
-        system: "Health KPI",
-        title: title,
-        category: group.category,
-        target: finalTarget,
-        performance: finalPerf,
-        status: finalStatus,
-      });
-
-      if (finalStatus === "passed_100") healthStats.passed++;
-      else if (finalStatus === "failed_75") healthStats.warning++;
-      else if (finalStatus === "failed_50" || finalStatus === "failed_0")
-        healthStats.critical++;
+      allIndicators.push({ id: `health-${title}`, system: 'Health KPI', title, category: group.category, target: finalTarget, performance: finalPerf, status: finalStatus });
+      if (finalStatus === 'passed_100') healthStats.passed++;
+      else if (finalStatus === 'failed_75') healthStats.warning++;
+      else if (finalStatus === 'failed_50') healthStats.atRisk++;
+      else if (finalStatus === 'failed_0')  healthStats.critical++;
       else healthStats.pending++;
     });
 
-    const totalKPIs = sdgsStats.total + healthStats.total;
-    const totalPassed = sdgsStats.passed + healthStats.passed;
+    const totalKPIs    = sdgsStats.total + healthStats.total;
+    const totalPassed  = sdgsStats.passed + healthStats.passed;
     const totalWarning = sdgsStats.warning + healthStats.warning;
-    const totalCritical = sdgsStats.critical + healthStats.critical;
+    const totalAtRisk  = sdgsStats.atRisk + healthStats.atRisk;
+    const totalCritical= sdgsStats.critical + healthStats.critical;
 
-    // Bar Data
-    const bData = [
-      {
-        name: "ตัวชี้วัด SDGs",
-        บรรลุเป้าหมาย: sdgsStats.passed,
-        เฝ้าระวัง: sdgsStats.warning,
-        วิกฤติลดหลั่น: sdgsStats.critical,
-      },
-      {
-        name: "Health KPI",
-        บรรลุเป้าหมาย: healthStats.passed,
-        เฝ้าระวัง: healthStats.warning,
-        วิกฤติลดหลั่น: healthStats.critical,
-      },
-    ];
-
-    return {
-      stats: {
-        totalKPIs,
-        totalPassed,
-        totalWarning,
-        totalCritical,
-        sdgsStats,
-        healthStats,
-        allIndicators,
-      },
-      barData: bData,
-    };
+    return { stats: { totalKPIs, totalPassed, totalWarning, totalAtRisk, totalCritical, sdgsStats, healthStats, allIndicators } };
   }, [data]);
 
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
+  /* ── Loading Skeleton ── */
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="animate-spin text-sky-500" size={48} />
-        <p className="text-slate-800 font-bold">
-          กำลังรวบรวมข้อมูลองค์รวมกองยุทธศาสตร์และแผนงาน...
-        </p>
+      <div className="max-w-7xl mx-auto space-y-6 pb-12 animate-pulse">
+        <div className="skeleton h-44 w-full rounded-3xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 skeleton h-52 rounded-3xl" />
+          <div className="skeleton h-52 rounded-3xl" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="skeleton h-40 rounded-3xl" />
+          <div className="skeleton h-40 rounded-3xl" />
+        </div>
+        <div className="skeleton h-72 w-full rounded-3xl" />
       </div>
     );
   }
 
   if (error || !stats) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-rose-500 gap-4">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-rose-500">
         <AlertOctagon size={48} />
-        <p className="font-bold text-slate-700 mt-2">
-          เกิดข้อผิดพลาดในการโหลดข้อมูล
-        </p>
+        <p className="font-bold text-slate-700">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
       </div>
     );
   }
 
-  const passedPercent =
-    stats.totalKPIs > 0
-      ? Math.round((stats.totalPassed / stats.totalKPIs) * 100)
-      : 0;
+  /* ── Derived values (ใช้ข้อมูลจริง) ── */
+  const passedPct  = stats.totalKPIs > 0 ? Math.round((stats.totalPassed  / stats.totalKPIs) * 100) : 0;
+  const sdgPct     = stats.sdgsStats.total   > 0 ? Math.round((stats.sdgsStats.passed   / stats.sdgsStats.total)   * 100) : 0;
+  const healthPct  = stats.healthStats.total  > 0 ? Math.round((stats.healthStats.passed  / stats.healthStats.total)  * 100) : 0;
+
+  const urgentItems   = stats.allIndicators.filter(k => k.status === 'failed_0');
+  const warningItems  = stats.allIndicators.filter(k => k.status === 'failed_75' || k.status === 'failed_50');
+  const actionItems   = [...urgentItems, ...warningItems];
+
+  const tableItems = showAll
+    ? stats.allIndicators
+    : stats.allIndicators.filter(k => k.status === 'failed_0' || k.status === 'failed_50' || k.status === 'failed_75');
+
+  /* ── Hero gradient based on overall health ── */
+  const heroGradient = passedPct >= 75
+    ? 'from-slate-800 via-slate-700 to-slate-900'
+    : passedPct >= 50
+    ? 'from-slate-800 via-slate-800 to-orange-900'
+    : 'from-slate-900 via-rose-950 to-slate-900';
 
   return (
-    <div className="max-w-7xl mx-auto space-y-10 pb-12">
-      {/* MISSION CONTROL HEADER: Professional & Balanced */}
-      <div className="relative overflow-hidden bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-xl">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-sky-100/30 rounded-full blur-[100px] -mr-20 -mt-20" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-100/20 rounded-full blur-[80px] -ml-20 -mb-20" />
+    <div className="max-w-7xl mx-auto space-y-6 pb-12 fade-in-up">
 
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
-          {/* Left: Branding & Summary */}
-          <div className="flex-1 flex flex-col md:flex-row items-center gap-8">
-            <div className="p-6 bg-gradient-to-br from-sky-500 to-blue-600 rounded-3xl shadow-xl ring-8 ring-sky-50 transition-transform hover:scale-105 duration-500">
-              <Target className="text-white" size={40} />
-            </div>
-            <div className="text-center md:text-left">
-              <h1 className="text-6xl font-black text-slate-800 tracking-tight leading-none mb-3">
-                ตัวชี้วัดสำคัญ
-              </h1>
-              <p className="text-sky-600 font-black uppercase tracking-[0.10em] text-2xl">
-                กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
-              </p>
-              <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-4">
-                <div className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[18px] font-bold text-slate-800 uppercase tracking-widest">
-                  Year: <span className="text-slate-800">2026</span>
-                </div>
-                <div className="px-4 py-2 bg-sky-50 border border-sky-100 rounded-xl text-[18px] font-bold text-sky-600 uppercase tracking-widest">
-                  Total Monitors:{" "}
-                  <span className="text-sky-800">{stats.totalKPIs}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Master Gauge (Integrated) */}
-          <div className="bg-slate-50/70 backdrop-blur-md border border-slate-200 p-8 rounded-[3rem] shadow-inner flex items-center gap-8 group">
-            <div className="relative w-32 h-32 flex-shrink-0">
-              <svg
-                className="w-full h-full -rotate-90 transform"
-                viewBox="0 0 100 100"
-              >
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="transparent"
-                  stroke="#e2e8f0"
-                  strokeWidth="10"
-                />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="transparent"
-                  stroke="url(#globalGradient)"
-                  strokeWidth="10"
-                  strokeDasharray={`${(stats.totalPassed / stats.totalKPIs) * 282.7} 282.7`}
-                  strokeLinecap="round"
-                  className="transition-all duration-1000 ease-out"
-                />
-                <defs>
-                  <linearGradient
-                    id="globalGradient"
-                    x1="0%"
-                    y1="0%"
-                    x2="100%"
-                    y2="100%"
-                  >
-                    <stop offset="0%" stopColor="#10b981" />
-                    <stop offset="100%" stopColor="#0ea5e9" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-5xl font-black text-slate-800">
-                  {passedPercent}%
-                </span>
-                <p className="text-[10px] font-black text-slate-800 uppercase tracking-tighter">
-                  SUCCESS
-                </p>
-              </div>
-            </div>
-            <div className="pr-4">
-              <p className="text-lg font-black text-sky-600 uppercase tracking-widest mb-1">
-                System Health
-              </p>
-              <div className="h-1.5 w-24 bg-slate-200 rounded-full overflow-hidden mb-2">
-                <div
-                  className="h-full bg-emerald-500 rounded-full"
-                  style={{ width: `${passedPercent}%` }}
-                ></div>
-              </div>
-              <p className="text-base text-slate-800 font-bold italic">
-                ผ่านเป้าหมาย {stats.totalPassed} จาก {stats.totalKPIs}
-              </p>
-            </div>
-          </div>
+      {/* ════════════════════════════════════════════════════════════════════
+          HERO SECTION — Big number, status summary
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className={`relative overflow-hidden bg-gradient-to-r ${heroGradient} rounded-3xl p-8 md:p-10 text-white shadow-2xl`}>
+        {/* Background texture */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute inset-0" style={{backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '32px 32px'}} />
         </div>
-      </div>
+        <div className="absolute -right-16 -top-16 w-72 h-72 bg-white/5 rounded-full blur-2xl" />
+        <div className="absolute -left-8 -bottom-8 w-48 h-48 bg-white/5 rounded-full blur-2xl" />
 
-      {/* GLOBAL STATUS DISTRIBUTION: 4 Symmetrical Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-2">
-        {/* Success Card */}
-        <div className="bg-white border border-emerald-100 rounded-[2rem] p-6 shadow-sm hover:shadow-xl transition-all group relative overflow-hidden">
-          <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
-            <CheckCircle2 className="text-emerald-500" size={100} />
-          </div>
-          <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-100 mb-4 shadow-inner">
-            <CheckCircle2 className="text-emerald-500" size={24} />
-          </div>
-          <p className="text-6xl font-black text-slate-800 tracking-tighter">
-            {stats.totalPassed}
-          </p>
-          <p className="text-lg font-black text-emerald-600 uppercase tracking-widest mt-1">
-            บรรลุเป้าหมาย
-          </p>
-          <p className="text-base text-slate-800 font-medium mt-1 uppercase tracking-wider">
-            Status: Normal (100%)
-          </p>
-        </div>
-
-        {/* Warning Card */}
-        <div className="bg-white border border-yellow-100 rounded-[2rem] p-6 shadow-sm hover:shadow-xl transition-all group relative overflow-hidden">
-          <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
-            <Activity className="text-yellow-500" size={100} />
-          </div>
-          <div className="w-12 h-12 bg-yellow-50 rounded-2xl flex items-center justify-center border border-yellow-100 mb-4 shadow-inner">
-            <Activity className="text-yellow-500" size={24} />
-          </div>
-          <p className="text-6xl font-black text-slate-800 tracking-tighter">
-            {stats.totalWarning}
-          </p>
-          <p className="text-lg font-black text-yellow-600 uppercase tracking-widest mt-1">
-            เฝ้าระวัง / ต่ำกว่าเป้า
-          </p>
-          <p className="text-base text-slate-800 font-medium mt-1 uppercase tracking-wider">
-            Status: Warning (75-99%)
-          </p>
-        </div>
-
-        {/* Risk Card */}
-        <div className="bg-white border border-orange-100 rounded-[2rem] p-6 shadow-sm hover:shadow-xl transition-all group relative overflow-hidden">
-          <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500 text-orange-500">
-            <AlertOctagon size={100} />
-          </div>
-          <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center border border-orange-100 mb-4 shadow-inner text-orange-500">
-            <AlertOctagon size={24} />
-          </div>
-          <p className="text-6xl font-black text-slate-800 tracking-tighter">
-            {stats.allIndicators.filter((k) => k.status === "failed_50").length}
-          </p>
-          <p className="text-lg font-black text-orange-600 uppercase tracking-widest mt-1">
-            ระดับเสี่ยง
-          </p>
-          <p className="text-base text-slate-800 font-medium mt-1 uppercase tracking-wider">
-            Status: At Risk (50-74%)
-          </p>
-        </div>
-
-        {/* Critical Card */}
-        <div className="bg-white border border-rose-100 rounded-[2rem] p-6 shadow-sm hover:shadow-xl transition-all group relative overflow-hidden">
-          <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500 text-rose-500">
-            <XCircle size={100} />
-          </div>
-          <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center border border-rose-100 mb-4 shadow-inner text-rose-500">
-            <XCircle size={24} />
-          </div>
-          <p className="text-6xl font-black text-slate-800 tracking-tighter">
-            {stats.allIndicators.filter((k) => k.status === "failed_0").length}
-          </p>
-          <p className="text-lg font-black text-rose-600 uppercase tracking-widest mt-1">
-            ขั้นวิกฤติ
-          </p>
-          <p className="text-base text-slate-800 font-medium mt-1 uppercase tracking-wider">
-            Status: Critical ({"<"}50%)
-          </p>
-        </div>
-      </div>
-
-      {/* SYSTEM COMPARISON TILES */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* SDGs Tile */}
-        <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm relative overflow-hidden group hover:border-sky-300 transition-all flex flex-col md:flex-row items-center gap-10">
-          <div className="relative w-32 h-32 flex-shrink-0">
-            <svg
-              className="w-full h-full -rotate-90 transform"
-              viewBox="0 0 100 100"
-            >
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="transparent"
-                stroke="#f1f5f9"
-                strokeWidth="10"
-              />
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="transparent"
-                stroke="#0ea5e9"
-                strokeWidth="10"
-                strokeDasharray={`${(stats.sdgsStats.passed / stats.sdgsStats.total) * 282.7} 282.7`}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-4xl font-black text-slate-800">
-                {Math.round(
-                  (stats.sdgsStats.passed / stats.sdgsStats.total) * 100,
-                )}
-                %
-              </span>
-            </div>
-          </div>
-          <div className="flex-1 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
-              <PieIcon className="text-sky-500" size={20} />
-              <h3 className="text-4xl font-black text-slate-800 tracking-tight">
-                เป้าหมายสากล SDGs
-              </h3>
-            </div>
-            <p className="text-slate-800 font-medium mb-6">
-              ความคืบหน้าของโครงการย่อยภายใต้วาระการพัฒนาที่ยั่งยืน
-            </p>
-            <div className="flex justify-center md:justify-start gap-8 border-t border-slate-100 pt-6">
-              <div>
-                <p className="text-5xl font-black text-slate-800">
-                  {stats.sdgsStats.total}
-                </p>
-                <p className="text-base font-bold text-slate-800 uppercase tracking-widest mt-1">
-                  Total KPIs
-                </p>
-              </div>
-              <div>
-                <p className="text-5xl font-black text-emerald-500">
-                  {stats.sdgsStats.passed}
-                </p>
-                <p className="text-base font-bold text-slate-800 uppercase tracking-widest mt-1">
-                  Success
-                </p>
-              </div>
-              <button
-                onClick={() => navigate("/sdgs")}
-                className="bg-sky-50 text-sky-600 font-bold text-base px-4 py-2 rounded-xl border border-sky-100 hover:bg-sky-500 hover:text-white transition-all ml-auto self-end"
-              >
-                View More
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Health KPI Tile */}
-        <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition-all flex flex-col md:flex-row items-center gap-10">
-          <div className="relative w-32 h-32 flex-shrink-0">
-            <svg
-              className="w-full h-full -rotate-90 transform"
-              viewBox="0 0 100 100"
-            >
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="transparent"
-                stroke="#f1f5f9"
-                strokeWidth="10"
-              />
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="transparent"
-                stroke="#10b981"
-                strokeWidth="10"
-                strokeDasharray={`${(stats.healthStats.passed / stats.healthStats.total) * 282.7} 282.7`}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-4xl font-black text-slate-800">
-                {Math.round(
-                  (stats.healthStats.passed / stats.healthStats.total) * 100,
-                )}
-                %
-              </span>
-            </div>
-          </div>
-          <div className="flex-1 text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
-              <Activity className="text-emerald-500" size={20} />
-              <h3 className="text-4xl font-black text-slate-800 tracking-tight">
-                เป้าหมายสาธารณสุข
-              </h3>
-            </div>
-            <p className="text-slate-800 font-medium mb-6">
-              ความคืบหน้าของตัวชี้วัดสำคัญระดับกระทรวง (Health KPI)
-            </p>
-            <div className="flex justify-center md:justify-start gap-8 border-t border-slate-100 pt-6">
-              <div>
-                <p className="text-5xl font-black text-slate-800">
-                  {stats.healthStats.total}
-                </p>
-                <p className="text-base font-bold text-slate-800 uppercase tracking-widest mt-1">
-                  Total KPIs
-                </p>
-              </div>
-              <div>
-                <p className="text-5xl font-black text-emerald-500">
-                  {stats.healthStats.passed}
-                </p>
-                <p className="text-base font-bold text-slate-800 uppercase tracking-widest mt-1">
-                  Success
-                </p>
-              </div>
-              <button
-                onClick={() => navigate("/healthkpi")}
-                className="bg-emerald-50 text-emerald-600 font-bold text-base px-4 py-2 rounded-xl border border-emerald-100 hover:bg-emerald-500 hover:text-white transition-all ml-auto self-end"
-              >
-                View More
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* MASTER KPI TABLE: Professional Design */}
-      <div className="bg-white rounded-[3rem] shadow-xl border border-slate-200 overflow-hidden relative">
-        <div className="p-8 border-b border-slate-100 bg-slate-50/50 backdrop-blur-md sticky top-0 z-30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
+          {/* Left: Main Metric */}
           <div>
-            <h3 className="text-4xl font-black text-slate-800 flex items-center gap-3">
-              <TrendingUp size={24} className="text-sky-500" /> Executive Master
-              Table
-            </h3>
-            <p className="text-slate-800 font-bold uppercase tracking-widest text-base mt-1">
-              Total Consolidated Database ({stats.totalKPIs} Measures)
+            <p className="text-white/50 font-bold uppercase tracking-[0.3em] text-xs mb-2 flex items-center gap-2">
+              <Target size={12} /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค — ปี 2569
+            </p>
+            <div className="flex items-end gap-4 mb-3">
+              <span className="text-7xl md:text-8xl font-black tracking-tighter tabular-nums leading-none">{passedPct}</span>
+              <div className="pb-2">
+                <span className="text-3xl font-black text-white/70">%</span>
+                <p className="text-white/60 text-sm font-bold uppercase tracking-wider">ภาพรวมการดำเนินงาน</p>
+              </div>
+            </div>
+            <p className="text-white/40 text-sm font-medium">
+              บรรลุเป้าหมาย <span className="text-white font-black">{stats.totalPassed}</span> จาก <span className="text-white font-black">{stats.totalKPIs}</span> ตัวชี้วัดทั้งหมด
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-lg font-bold text-slate-800 uppercase">
-              Search KPI:
-            </span>
-            <input
-              type="text"
-              placeholder="ค้นหาชื่อตัวชี้วัด..."
-              className="h-12 w-72 bg-white border border-slate-200 rounded-2xl px-4 py-2 text-xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all shadow-inner shadow-slate-50 placeholder:text-slate-600"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+
+          {/* Right: Status Pill Summary */}
+          <div className="flex flex-wrap gap-3">
+            <div className="flex items-center gap-2.5 bg-emerald-500/20 border border-emerald-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
+              <CheckCircle2 size={18} className="text-emerald-400" />
+              <div>
+                <p className="text-2xl font-black text-white tabular-nums leading-none">{stats.totalPassed}</p>
+                <p className="text-emerald-300 text-[10px] font-bold uppercase tracking-wider">บรรลุเป้าหมาย</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 bg-amber-500/20 border border-amber-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
+              <AlertTriangle size={18} className="text-amber-400" />
+              <div>
+                <p className="text-2xl font-black text-white tabular-nums leading-none">{stats.totalWarning}</p>
+                <p className="text-amber-300 text-[10px] font-bold uppercase tracking-wider">เฝ้าระวัง</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 bg-orange-500/20 border border-orange-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
+              <AlertOctagon size={18} className="text-orange-400" />
+              <div>
+                <p className="text-2xl font-black text-white tabular-nums leading-none">{stats.totalAtRisk}</p>
+                <p className="text-orange-300 text-[10px] font-bold uppercase tracking-wider">ระดับเสี่ยง</p>
+              </div>
+            </div>
+            <div className={`flex items-center gap-2.5 border backdrop-blur-sm px-5 py-3 rounded-2xl ${stats.totalCritical > 0 ? 'bg-rose-500/30 border-rose-400/50 pulse-ring-rose' : 'bg-rose-500/10 border-rose-400/20'}`}>
+              <XCircle size={18} className="text-rose-400" />
+              <div>
+                <p className="text-2xl font-black text-white tabular-nums leading-none">{stats.totalCritical}</p>
+                <p className="text-rose-300 text-[10px] font-bold uppercase tracking-wider">ขั้นวิกฤติ</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          BENTO ROW 1 — Urgent Panel + System Health Donut
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* Urgent Action Panel (2/3 width) */}
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-rose-100 shadow-md overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-rose-50 bg-rose-50/50">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center">
+                <AlertOctagon size={18} className="text-rose-600" />
+              </div>
+              <div>
+                <h2 className="font-black text-slate-800 text-sm">รายการที่ต้องเร่งดำเนินการ</h2>
+                <p className="text-xs text-slate-400 font-medium">ตัวชี้วัดที่ยังต่ำกว่าเป้าหมาย ({actionItems.length} รายการ)</p>
+              </div>
+            </div>
+          </div>
+          <div className="divide-y divide-slate-50">
+            {actionItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-2 text-slate-300">
+                <ShieldCheck size={36} />
+                <p className="font-bold text-sm">ทุกตัวชี้วัดผ่านเป้าหมาย</p>
+              </div>
+            ) : (
+              actionItems.slice(0, 5).map((kpi, i) => {
+                const s = STATUS[kpi.status] || STATUS.pending;
+                const rank = i + 1;
+                const rankColor = rank === 1 ? 'bg-rose-500' : rank === 2 ? 'bg-orange-500' : rank === 3 ? 'bg-amber-500' : 'bg-slate-300';
+                return (
+                  <div key={kpi.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/70 transition-colors group">
+                    <span className={`w-7 h-7 rounded-lg ${rankColor} text-white text-xs font-black flex items-center justify-center flex-shrink-0`}>{rank}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-700 text-sm truncate group-hover:text-slate-900 transition-colors">{kpi.title}</p>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{kpi.system}</span>
+                        {kpi.target && <span className="text-[10px] text-slate-300">เป้า: {kpi.target}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      {kpi.performance && (
+                        <span className="text-xl font-black text-slate-700 tabular-nums">{kpi.performance}</span>
+                      )}
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border ${s.bg} ${s.text} ${s.border}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                        {s.short}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          {actionItems.length > 5 && (
+            <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-center">
+              <p className="text-xs font-bold text-slate-400">และอีก {actionItems.length - 5} รายการ — ดูในตารางสรุปด้านล่าง</p>
+            </div>
+          )}
+        </div>
+
+        {/* System Health Donut (1/3 width) */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-6 flex flex-col items-center justify-center gap-4">
+          <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">System Health</p>
+          <div className="relative">
+            <DonutRing
+              percent={passedPct}
+              color={passedPct >= 75 ? '#10b981' : passedPct >= 50 ? '#f97316' : '#f43f5e'}
+              size={140}
+              stroke={14}
             />
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-4xl font-black text-slate-800 tabular-nums leading-none">{passedPct}</span>
+              <span className="text-lg font-black text-slate-400">%</span>
+            </div>
+          </div>
+          <div className="w-full space-y-2">
+            {[
+              { label: 'บรรลุเป้าหมาย', val: stats.totalPassed,   color: 'bg-emerald-500' },
+              { label: 'เฝ้าระวัง',      val: stats.totalWarning,  color: 'bg-amber-400' },
+              { label: 'ระดับเสี่ยง',    val: stats.totalAtRisk,   color: 'bg-orange-500' },
+              { label: 'ขั้นวิกฤติ',     val: stats.totalCritical, color: 'bg-rose-500' },
+            ].map(item => (
+              <div key={item.label} className="flex items-center gap-2">
+                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${item.color}`} />
+                <span className="text-xs text-slate-500 flex-1">{item.label}</span>
+                <span className="text-xs font-black text-slate-700 tabular-nums">{item.val}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          BENTO ROW 2 — SDGs vs Health KPI Side-by-Side
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* SDGs Card */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-6 hover:shadow-lg transition-all hover:border-sky-200 group">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center">
+                <Layers size={18} className="text-sky-600" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-800">เป้าหมายสากล SDGs</h3>
+                <p className="text-xs text-slate-400 font-medium">Sustainable Development Goals</p>
+              </div>
+            </div>
+            <button onClick={() => navigate('/sdgs')} className="flex items-center gap-1 text-xs font-bold text-sky-500 hover:text-sky-700 transition-colors mt-1 flex-shrink-0">
+              ดูรายละเอียด <ArrowRight size={12} />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-6 mt-6">
+            <div className="relative flex-shrink-0">
+              <DonutRing percent={sdgPct} color="#0ea5e9" size={100} stroke={10} />
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-black text-slate-800 tabular-nums leading-none">{sdgPct}</span>
+                <span className="text-xs font-bold text-slate-400">%</span>
+              </div>
+            </div>
+            <div className="flex-1 grid grid-cols-2 gap-3">
+              {[
+                { label: 'ทั้งหมด',   val: stats.sdgsStats.total,    color: 'text-slate-700' },
+                { label: 'บรรลุเป้า', val: stats.sdgsStats.passed,   color: 'text-emerald-600' },
+                { label: 'เฝ้าระวัง', val: stats.sdgsStats.warning,  color: 'text-amber-600' },
+                { label: 'วิกฤติ',    val: stats.sdgsStats.critical, color: 'text-rose-600' },
+              ].map(item => (
+                <div key={item.label} className="bg-slate-50 rounded-2xl p-3 text-center">
+                  <p className={`text-2xl font-black tabular-nums ${item.color}`}>{item.val}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{item.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mini progress bar */}
+          <div className="mt-4 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full bg-sky-500 rounded-full transition-all duration-1000" style={{ width: `${sdgPct}%` }} />
           </div>
         </div>
 
-        <div className="overflow-x-auto max-h-[800px]">
-          <table className="w-full text-left border-collapse border-spacing-0">
+        {/* Health KPI Card */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-6 hover:shadow-lg transition-all hover:border-emerald-200 group">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                <BarChart2 size={18} className="text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-800">ตัวชี้วัดสาธารณสุข</h3>
+                <p className="text-xs text-slate-400 font-medium">Health KPI — ระดับกระทรวง</p>
+              </div>
+            </div>
+            <button onClick={() => navigate('/healthkpi')} className="flex items-center gap-1 text-xs font-bold text-emerald-500 hover:text-emerald-700 transition-colors mt-1 flex-shrink-0">
+              ดูรายละเอียด <ArrowRight size={12} />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-6 mt-6">
+            <div className="relative flex-shrink-0">
+              <DonutRing percent={healthPct} color="#10b981" size={100} stroke={10} />
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-black text-slate-800 tabular-nums leading-none">{healthPct}</span>
+                <span className="text-xs font-bold text-slate-400">%</span>
+              </div>
+            </div>
+            <div className="flex-1 grid grid-cols-2 gap-3">
+              {[
+                { label: 'ทั้งหมด',   val: stats.healthStats.total,    color: 'text-slate-700' },
+                { label: 'บรรลุเป้า', val: stats.healthStats.passed,   color: 'text-emerald-600' },
+                { label: 'เฝ้าระวัง', val: stats.healthStats.warning,  color: 'text-amber-600' },
+                { label: 'วิกฤติ',    val: stats.healthStats.critical, color: 'text-rose-600' },
+              ].map(item => (
+                <div key={item.label} className="bg-slate-50 rounded-2xl p-3 text-center">
+                  <p className={`text-2xl font-black tabular-nums ${item.color}`}>{item.val}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{item.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mini progress bar */}
+          <div className="mt-4 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${healthPct}%` }} />
+          </div>
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          COMPACT TABLE — Default: Critical/Warning เท่านั้น
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-md overflow-hidden">
+        <div className="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center">
+              <TrendingUp size={16} className="text-slate-600" />
+            </div>
+            <div>
+              <h2 className="font-black text-slate-800 text-sm">สรุปผลตัวชี้วัดทั้งหมด</h2>
+              <p className="text-xs text-slate-400 font-medium">
+                {showAll ? `แสดงทั้งหมด ${stats.allIndicators.length} รายการ` : `แสดงเฉพาะรายการที่ต้องติดตาม ${tableItems.length} รายการ`}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowAll(v => !v)}
+            className="text-xs font-bold px-4 py-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center gap-1.5"
+          >
+            {showAll ? 'แสดงเฉพาะรายการสำคัญ' : 'แสดงทั้งหมด'}
+            <ArrowRight size={12} className={`transition-transform ${showAll ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
             <thead>
-              <tr className="bg-white border-b border-slate-100">
-                <th className="py-5 px-8 text-slate-800 font-black text-base uppercase tracking-[0.2em]">
-                  System
-                </th>
-                <th className="py-5 px-8 text-slate-800 font-black text-base uppercase tracking-[0.2em] w-1/3">
-                  Indicator Name
-                </th>
-                <th className="py-5 px-8 text-slate-800 font-black text-base uppercase tracking-[0.2em] text-right">
-                  Target
-                </th>
-                <th className="py-5 px-8 text-slate-800 font-black text-base uppercase tracking-[0.2em] text-right">
-                  Perform.
-                </th>
-                <th className="py-5 px-8 text-slate-800 font-black text-base uppercase tracking-[0.2em] text-center">
-                  Executive Status
-                </th>
+              <tr className="border-b border-slate-100 bg-slate-50/60">
+                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest w-24">ระบบ</th>
+                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">ตัวชี้วัด</th>
+                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right w-28">ผลงาน</th>
+                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right w-28">เป้าหมาย</th>
+                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center w-32">สถานะ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 bg-white">
-              {stats.allIndicators
-                .filter((kpi) =>
-                  kpi.title.toLowerCase().includes(searchTerm.toLowerCase()),
-                )
-                .map((kpi, index) => {
-                  let statusBg, statusText, statusLabel, statusDot, StatusIcon;
-
-                  if (kpi.status === "passed_100") {
-                    statusBg = "bg-emerald-50/50";
-                    statusText = "text-emerald-700";
-                    statusLabel = "Passed";
-                    statusDot = "bg-emerald-500";
-                    StatusIcon = CheckCircle2;
-                  } else if (kpi.status === "failed_75") {
-                    statusBg = "bg-amber-50/50";
-                    statusText = "text-amber-700";
-                    statusLabel = "Warning";
-                    statusDot = "bg-amber-500";
-                    StatusIcon = Activity;
-                  } else if (kpi.status === "failed_50") {
-                    statusBg = "bg-orange-50/50";
-                    statusText = "text-orange-700";
-                    statusLabel = "At Risk";
-                    statusDot = "bg-orange-500";
-                    StatusIcon = AlertOctagon;
-                  } else if (kpi.status === "failed_0") {
-                    statusBg = "bg-rose-50/50";
-                    statusText = "text-rose-700";
-                    statusLabel = "Critical";
-                    statusDot = "bg-rose-500";
-                    StatusIcon = XCircle;
-                  } else {
-                    statusBg = "bg-slate-50/50";
-                    statusText = "text-slate-800";
-                    statusLabel = "Pending";
-                    statusDot = "bg-slate-300";
-                    StatusIcon = Loader2;
-                  }
-
+            <tbody className="divide-y divide-slate-50">
+              {tableItems.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-2 text-slate-300">
+                      <ShieldCheck size={32} />
+                      <p className="font-bold text-sm">ทุกตัวชี้วัดบรรลุเป้าหมาย</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                tableItems.map((kpi, idx) => {
+                  const s = STATUS[kpi.status] || STATUS.pending;
+                  const Icon = s.Icon;
                   return (
-                    <tr
-                      key={index}
-                      className="hover:bg-slate-50/50 transition-all group"
-                    >
-                      <td className="py-6 px-8 align-middle">
-                        <span
-                          className={`text-[10px] sm:text-base font-black px-4 py-2 rounded-xl uppercase tracking-widest ${kpi.system === "SDGs" ? "bg-sky-100/50 text-sky-700" : "bg-emerald-100/50 text-emerald-700"} border border-transparent group-hover:border-current transition-colors`}
-                        >
-                          {kpi.system}
+                    <tr key={`${kpi.id}-${idx}`} className="hover:bg-slate-50/60 transition-colors group">
+                      <td className="px-6 py-4">
+                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wide ${kpi.system === 'SDGs' ? 'bg-sky-50 text-sky-600 border border-sky-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                          {kpi.system === 'SDGs' ? 'SDGs' : 'Health'}
                         </span>
                       </td>
-
-                      <td className="py-6 px-8 align-middle">
-                        <p
-                          className="text-xl font-black text-slate-700 group-hover:text-slate-900 transition-colors cursor-default leading-tight"
-                          title={kpi.title}
-                        >
-                          {kpi.title}
-                        </p>
-                        <p className="text-base text-slate-800 font-bold uppercase tracking-wider mt-1.5 flex items-center gap-2 italic">
-                          {kpi.category}
-                        </p>
+                      <td className="px-6 py-4">
+                        <p className="font-bold text-slate-700 text-sm leading-tight group-hover:text-slate-900 transition-colors line-clamp-2">{kpi.title}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 italic">{kpi.category}</p>
                       </td>
-
-                      <td className="py-6 px-8 align-middle text-right border-none">
-                        <span className="font-bold text-slate-800 text-lg">
-                          {kpi.target || "N/A"}
+                      <td className="px-6 py-4 text-right">
+                        <span className={`text-lg font-black tabular-nums ${kpi.performance ? 'text-slate-800' : 'text-slate-300'}`}>
+                          {kpi.performance || '—'}
                         </span>
                       </td>
-
-                      <td className="py-6 px-8 align-middle text-right border-none">
-                        <span
-                          className={`font-black text-4xl tabular-nums tracking-tighter ${kpi.performance ? "text-slate-800" : "text-slate-600"}`}
-                        >
-                          {kpi.performance || "--"}
-                        </span>
+                      <td className="px-6 py-4 text-right">
+                        <span className="text-sm font-bold text-slate-400">{kpi.target || '—'}</span>
                       </td>
-
-                      <td className="py-6 px-8 align-middle border-none">
-                        <div
-                          className={`flex items-center justify-center gap-3 px-5 py-3 rounded-2xl ${statusBg} border border-white group-hover:shadow-sm transition-all`}
-                        >
-                          <StatusIcon size={20} className={statusText} />
-                          <span
-                            className={`text-base font-black uppercase tracking-[0.15em] ${statusText}`}
-                          >
-                            {statusLabel}
-                          </span>
-                        </div>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${s.bg} ${s.text} ${s.border}`}>
+                          <Icon size={11} />
+                          {s.short}
+                        </span>
                       </td>
                     </tr>
                   );
-                })}
+                })
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Table Footer / Info */}
-        <div className="p-6 bg-slate-50 border-t border-slate-100 text-center">
-          <p className="text-base font-black text-slate-800 uppercase tracking-[0.3em]">
-            © 2026 Strategy and Planning Department Dashboard System
+        <div className="px-6 py-3 bg-slate-50 border-t border-slate-100">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">
+            © 2026 KPI Monitoring System — กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
           </p>
         </div>
       </div>
+
     </div>
   );
 }

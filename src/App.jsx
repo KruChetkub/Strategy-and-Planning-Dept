@@ -7,6 +7,8 @@ import DashboardOverview from './pages/DashboardOverview';
 import DataEntry from './pages/DataEntry';
 import DataEntryHealth from './pages/DataEntryHealth';
 import KPIGroup from './pages/KPIGroup';
+import ManageSDGs from './pages/ManageSDGs';
+import ManageHealth from './pages/ManageHealth';
 
 // Mock empty pages for routing structure
 const Settings = () => <div className="p-4 bg-white rounded-lg shadow-sm"><h2 className="text-xl font-bold text-slate-800">Settings</h2></div>;
@@ -21,6 +23,8 @@ function App() {
         <Route path="entry" element={<DataEntry />} />
         <Route path="entry-health" element={<DataEntryHealth />} />
         <Route path="group/:groupId" element={<KPIGroup />} />
+        <Route path="manage/sdgs" element={<ManageSDGs />} />
+        <Route path="manage/health" element={<ManageHealth />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>

@@ -27,7 +27,6 @@ export default function DataEntry() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setLoading(true);
 
     try {
       const { error: insertError } = await supabase
@@ -62,7 +61,7 @@ export default function DataEntry() {
   const labelClass = "block text-sm font-bold text-slate-700";
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-10">
+    <div className="max-w-4xl mx-auto space-y-8 pb-10 fade-in-up">
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 flex items-center justify-center">
           <FileSpreadsheet className="text-cyan-400" size={24} />

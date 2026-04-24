@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Activity, Settings, Edit, Target, X } from 'lucide-react';
+import { LayoutDashboard, Activity, Settings, Edit, Target, X, Table2, HeartPulse } from 'lucide-react';
 
 export default function Sidebar({ onClose, isMobile }) {
   const menuGroups = [
@@ -15,9 +15,11 @@ export default function Sidebar({ onClose, isMobile }) {
     {
       title: 'Admin',
       items: [
-        { label: 'บันทึกข้อมูล SDGs', icon: Edit, path: '/entry' },
-        { label: 'บันทึกข้อมูล Health KPI', icon: Edit, path: '/entry-health' },
-        { label: 'ตั้งค่าระบบ', icon: Settings, path: '/settings' },
+        { label: 'บันทึกข้อมูล SDGs',          icon: Edit,       path: '/entry' },
+        { label: 'บันทึกข้อมูล Health KPI',     icon: Edit,       path: '/entry-health' },
+        { label: 'จัดการข้อมูล SDGs',           icon: Table2,     path: '/manage/sdgs' },
+        { label: 'จัดการข้อมูล Health KPI',     icon: HeartPulse, path: '/manage/health' },
+        { label: 'ตั้งค่าระบบ',                 icon: Settings,   path: '/settings' },
       ],
     },
   ];

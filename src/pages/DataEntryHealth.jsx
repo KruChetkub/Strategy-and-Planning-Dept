@@ -126,7 +126,7 @@ export default function DataEntryHealth() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-10">
+    <div className="max-w-5xl mx-auto space-y-8 pb-10 fade-in-up">
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 border border-emerald-200 flex items-center justify-center shadow-md">
           <Activity className="text-emerald-600" size={24} />
