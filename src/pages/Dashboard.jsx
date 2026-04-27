@@ -2,15 +2,18 @@ import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Activity, Target, CheckCircle, AlertTriangle, MoreHorizontal } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { supabase } from '../lib/supabase';
+import { supabase, withSupabaseTimeout } from '../lib/supabase';
 
 
 
 const fetchAllData = async () => {
-  const { data, error } = await supabase
-    .from('sdg_indicators')
-    .select('*')
-    .order('indicator_name', { ascending: true });
+  const { data, error } = await withSupabaseTimeout(
+    supabase
+      .from('sdg_indicators')
+      .select('*')
+      .order('indicator_name', { ascending: true }),
+    'SDG page query'
+  );
     
   if (error) throw error;
   return data;
@@ -103,9 +106,10 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Dashboard({ categoryFilter }) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['google_sheets_data'],
-    queryFn: fetchAllData
+    queryFn: fetchAllData,
+    retry: 0,
   });
 
   const dashboardData = useMemo(() => {
@@ -204,6 +208,16 @@ export default function Dashboard({ categoryFilter }) {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-rose-500">
+        <AlertTriangle size={48} />
+        <p className="font-bold text-slate-700">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+        <p className="text-sm text-slate-500 text-center max-w-xl">{error.message}</p>
+      </div>
+    );
+  }
+
   // LIGHT THEME UTILITY CLASSES
   const glassCardClasses = "bg-white border border-slate-200 rounded-3xl p-6 shadow-sm relative overflow-hidden";
   const glassHeaderClasses = "text-xl font-bold text-slate-800 mb-6 flex items-center justify-between";
@@ -217,7 +231,7 @@ export default function Dashboard({ categoryFilter }) {
             <h1 className="text-4xl font-black text-slate-800 tracking-tight">
               {categoryFilter ? `แดชบอร์ด ${categoryFilter}` : 'ภาพรวมตัวชี้วัดสำคัญ (รวมทั้งหมด)'}
             </h1>
-            <p className="text-sky-600 font-semibold text-sm mt-2 flex items-center gap-2">
+            <p className="text-sky-700 font-semibold text-base mt-2 flex items-center gap-2">
               <Activity size={14} className="animate-pulse" /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
             </p>
           </div>
@@ -227,8 +241,8 @@ export default function Dashboard({ categoryFilter }) {
           <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6 border border-slate-100 shadow-inner">
             <AlertTriangle className="text-slate-400" size={36} />
           </div>
-          <h2 className="text-2xl font-bold text-slate-700 mb-2">ยังไม่มีข้อมูลในหมวดหมู่นี้</h2>
-          <p className="text-slate-500 max-w-md mx-auto leading-relaxed">
+          <h2 className="text-[1.65rem] font-bold text-slate-900 mb-2">ยังไม่มีข้อมูลในหมวดหมู่นี้</h2>
+          <p className="text-[1.05rem] text-slate-900 max-w-md mx-auto leading-relaxed">
             ระบบยังไม่พบตัวเลขหรือข้อมูลตัวชี้วัดใดๆ สำหรับ {categoryFilter ? `หมวดหมู่ "${categoryFilter}"` : 'ระบบ'}<br/>
             คุณสามารถเพิ่มข้อมูลใหม่ได้ที่เมนู "บันทึกรายไตรมาส"
           </p>
@@ -241,10 +255,10 @@ export default function Dashboard({ categoryFilter }) {
     <div className="space-y-8 max-w-7xl mx-auto pb-12 fade-in-up">
       <div className="flex items-center justify-between mb-8 px-2">
         <div>
-          <h1 className="text-4xl font-black text-slate-800 tracking-tight">
+          <h1 className="text-[2.75rem] font-black text-slate-950 tracking-tight">
             {categoryFilter ? `แดชบอร์ด ${categoryFilter}` : 'ภาพรวมตัวชี้วัดสำคัญ (รวมทั้งหมด)'}
           </h1>
-          <p className="text-sky-600 font-semibold text-sm mt-2 flex items-center gap-2">
+          <p className="text-sky-700 font-semibold text-base mt-2 flex items-center gap-2">
             <Activity size={14} className="animate-pulse" /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
           </p>
         </div>
@@ -255,7 +269,7 @@ export default function Dashboard({ categoryFilter }) {
         
         {/* BIG GAUGE: Overall Success Rate */}
         <div className={`${glassCardClasses} lg:col-span-1 flex flex-col items-center justify-center py-10`}>
-          <div className="absolute top-4 left-6 text-sm font-bold text-slate-400 uppercase tracking-widest">
+          <div className="absolute top-4 left-6 text-[1rem] font-bold text-slate-900 uppercase tracking-widest">
             Overall Success
           </div>
           
@@ -288,16 +302,16 @@ export default function Dashboard({ categoryFilter }) {
             </svg>
             
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-6xl font-black text-slate-800 tracking-tighter">
+              <span className="text-[4.1rem] font-black text-slate-950 tracking-tighter">
                 {Math.round((passed/dashboardData.length)*100) || 0}%
               </span>
-              <span className="text-xs font-extrabold text-sky-600 uppercase tracking-[0.2em] mt-2">
+              <span className="text-sm font-extrabold text-sky-700 uppercase tracking-[0.2em] mt-2">
                 Completed
               </span>
             </div>
           </div>
 
-          <p className="text-slate-500 font-bold text-sm mt-6 text-center max-w-[200px]">
+          <p className="text-slate-950 font-bold text-base mt-6 text-center max-w-[220px]">
             จากทั้งหมด {dashboardData.length} ตัวชี้วัด <br/> บรรลุเป้าหมายไปแล้ว {passed} ข้อ
           </p>
         </div>
@@ -314,9 +328,9 @@ export default function Dashboard({ categoryFilter }) {
               <CheckCircle className="text-emerald-500" size={28} />
             </div>
             <div>
-              <p className="text-3xl font-black text-slate-800 tracking-tight">{pieData.find(d => d.name.includes('บรรลุ'))?.value || 0}</p>
-              <p className="text-sm font-bold text-emerald-600 uppercase tracking-widest mt-1">บรรลุเป้าหมาย</p>
-              <p className="text-xs text-slate-400 font-medium mt-1">สถานะปกติ (ร้อยละ 100)</p>
+              <p className="text-[2.05rem] font-black text-slate-950 tracking-tight">{pieData.find(d => d.name.includes('บรรลุ'))?.value || 0}</p>
+              <p className="text-base font-bold text-emerald-700 uppercase tracking-widest mt-1">บรรลุเป้าหมาย</p>
+              <p className="text-sm text-slate-900 font-medium mt-1">สถานะปกติ (ร้อยละ 100)</p>
             </div>
           </div>
 
@@ -329,9 +343,9 @@ export default function Dashboard({ categoryFilter }) {
               <Activity className="text-yellow-500" size={28} />
             </div>
             <div>
-              <p className="text-3xl font-black text-slate-800 tracking-tight">{pieData.find(d => d.name.includes('75'))?.value || 0}</p>
-              <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1">ต่ำกว่าเป้าหมาย</p>
-              <p className="text-xs text-slate-400 font-medium mt-1">ใกล้เป้า (ร้อยละ 75-99)</p>
+              <p className="text-[2.05rem] font-black text-slate-950 tracking-tight">{pieData.find(d => d.name.includes('75'))?.value || 0}</p>
+              <p className="text-base font-bold text-yellow-700 uppercase tracking-widest mt-1">ต่ำกว่าเป้าหมาย</p>
+              <p className="text-sm text-slate-900 font-medium mt-1">ใกล้เป้า (ร้อยละ 75-99)</p>
             </div>
           </div>
 
@@ -344,9 +358,9 @@ export default function Dashboard({ categoryFilter }) {
               <AlertTriangle className="text-orange-500" size={28} />
             </div>
             <div>
-              <p className="text-3xl font-black text-slate-800 tracking-tight">{pieData.find(d => d.name.includes('ระดับเสี่ยง'))?.value || 0}</p>
-              <p className="text-sm font-bold text-orange-600 uppercase tracking-widest mt-1">ระดับเสี่ยง</p>
-              <p className="text-xs text-slate-400 font-medium mt-1">เตือนภัย (ร้อยละ 50-74)</p>
+              <p className="text-[2.05rem] font-black text-slate-950 tracking-tight">{pieData.find(d => d.name.includes('ระดับเสี่ยง'))?.value || 0}</p>
+              <p className="text-base font-bold text-orange-700 uppercase tracking-widest mt-1">ระดับเสี่ยง</p>
+              <p className="text-sm text-slate-900 font-medium mt-1">เตือนภัย (ร้อยละ 50-74)</p>
             </div>
           </div>
 
@@ -359,9 +373,9 @@ export default function Dashboard({ categoryFilter }) {
               <AlertTriangle className="text-rose-500" size={28} />
             </div>
             <div>
-              <p className="text-3xl font-black text-slate-800 tracking-tight">{pieData.find(d => d.name.includes('วิกฤติ'))?.value || 0}</p>
-              <p className="text-sm font-bold text-rose-600 uppercase tracking-widest mt-1">ขั้นวิกฤติ</p>
-              <p className="text-xs text-slate-400 font-medium mt-1">ต้องแก้ไข (น้อยกว่าร้อยละ 50)</p>
+              <p className="text-[2.05rem] font-black text-slate-950 tracking-tight">{pieData.find(d => d.name.includes('วิกฤติ'))?.value || 0}</p>
+              <p className="text-base font-bold text-rose-700 uppercase tracking-widest mt-1">ขั้นวิกฤติ</p>
+              <p className="text-sm text-slate-900 font-medium mt-1">ต้องแก้ไข (น้อยกว่าร้อยละ 50)</p>
             </div>
           </div>
 
@@ -370,7 +384,7 @@ export default function Dashboard({ categoryFilter }) {
 
       {/* BOTTOM SECTION: Detailed Cards */}
       <div>
-        <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+        <h2 className="text-[1.4rem] font-bold text-slate-950 mb-6 flex items-center gap-3">
           <Target className="text-sky-500" />
           Detailed Tracking
         </h2>
@@ -380,12 +394,12 @@ export default function Dashboard({ categoryFilter }) {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider w-1/3">No. / หมวดหมู่ / ตัวชี้วัด</th>
-                  <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider text-right">เป้าหมาย (2573)</th>
-                  <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider text-right">ผลงาน</th>
-                  <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider w-40 text-center">สถานะ</th>
-                  <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider w-48 text-center">หน่วยงาน</th>
-                  <th className="py-4 px-6 text-slate-500 font-bold text-xs uppercase tracking-wider">หมายเหตุ</th>
+                  <th className="py-4 px-6 text-slate-950 font-bold text-sm uppercase tracking-wider w-1/3">No. / หมวดหมู่ / ตัวชี้วัด</th>
+                  <th className="py-4 px-6 text-slate-950 font-bold text-sm uppercase tracking-wider text-right">เป้าหมาย (2573)</th>
+                  <th className="py-4 px-6 text-slate-950 font-bold text-sm uppercase tracking-wider text-right">ผลงาน</th>
+                  <th className="py-4 px-6 text-slate-950 font-bold text-sm uppercase tracking-wider w-40 text-center">สถานะ</th>
+                  <th className="py-4 px-6 text-slate-950 font-bold text-sm uppercase tracking-wider w-48 text-center">หน่วยงาน</th>
+                  <th className="py-4 px-6 text-slate-950 font-bold text-sm uppercase tracking-wider">หมายเหตุ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -401,9 +415,9 @@ export default function Dashboard({ categoryFilter }) {
                     {/* Header Row for the Group */}
                     <tr className="bg-sky-50 border-b border-sky-100">
                       <td colSpan="6" className="p-0">
-                        <div className="py-3 px-6 text-sm font-black text-sky-800 border-l-4 border-sky-500 shadow-sm sticky left-0 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="py-3 px-6 text-base font-black text-sky-900 border-l-4 border-sky-500 shadow-sm sticky left-0 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <span className="leading-relaxed">{groupCode}</span>
-                          <span className="text-xs font-bold text-sky-600 bg-white px-3 py-1 rounded-full border border-sky-200 shadow-sm whitespace-nowrap">{kpis.length} ตัวชี้วัด</span>
+                          <span className="text-sm font-bold text-sky-800 bg-white px-3 py-1 rounded-full border border-sky-200 shadow-sm whitespace-nowrap">{kpis.length} ตัวชี้วัด</span>
                         </div>
                       </td>
                     </tr>
@@ -413,16 +427,16 @@ export default function Dashboard({ categoryFilter }) {
                       <tr key={kpi.id} className="hover:bg-sky-50/50 transition-colors group">
                         <td className="py-5 px-6 align-top">
                           <div className="flex gap-4 items-start">
-                            <span className="text-slate-500 font-black text-sm mt-0.5 w-7 shrink-0 border border-slate-200 rounded-md text-center py-1 bg-white group-hover:bg-slate-50 group-hover:border-slate-300 transition-colors shadow-sm">{index + 1}</span>
+                            <span className="text-slate-950 font-black text-base mt-0.5 w-8 shrink-0 border border-slate-200 rounded-md text-center py-1 bg-white group-hover:bg-slate-50 group-hover:border-slate-300 transition-colors shadow-sm">{index + 1}</span>
                             <div>
-                              <p className="text-sm font-bold text-sky-600 mb-1">{kpi.category}</p>
-                              <p className="text-base font-bold text-slate-800 leading-relaxed max-w-xl" title={kpi.title}>{kpi.title}</p>
+                              <p className="text-base font-bold text-sky-700 mb-1">{kpi.category}</p>
+                              <p className="text-[1.1rem] font-bold text-slate-950 leading-relaxed max-w-xl" title={kpi.title}>{kpi.title}</p>
                             </div>
                           </div>
                         </td>
 
                         <td className="py-5 px-6 align-top text-right">
-                      <span className="font-black text-slate-700 text-sm">{kpi.target_value || '-'}</span>
+                      <span className="font-black text-slate-950 text-base">{kpi.target_value || '-'}</span>
                     </td>
 
                     <td className="py-4 px-6 align-top text-right">
@@ -451,7 +465,7 @@ export default function Dashboard({ categoryFilter }) {
                     </td>
 
                     <td className="py-5 px-6 align-top">
-                      <div className="text-xs text-slate-500 italic max-w-xs break-words bg-slate-50/50 p-2 rounded-lg border border-transparent group-hover:border-slate-100 transition-all">
+                      <div className="text-sm text-slate-950 italic max-w-xs break-words bg-slate-50/50 p-2 rounded-lg border border-transparent group-hover:border-slate-100 transition-all">
                         {kpi.note || '-'}
                       </div>
                     </td>

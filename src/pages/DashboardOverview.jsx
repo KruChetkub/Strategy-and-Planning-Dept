@@ -6,15 +6,15 @@ import {
   TrendingUp, XCircle, ArrowRight, AlertTriangle, ShieldCheck,
   BarChart2, Layers
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, withSupabaseTimeout } from '../lib/supabase';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    DATA FETCHING & HELPERS — ไม่มีการแก้ไข logic ใดๆ ทั้งสิ้น
 ───────────────────────────────────────────────────────────────────────────── */
 const fetchAllDashboards = async () => {
   const [resSdgs, resHealth] = await Promise.all([
-    supabase.from('sdg_indicators').select('*'),
-    supabase.from('health_indicators').select('*')
+    withSupabaseTimeout(supabase.from('sdg_indicators').select('*'), 'SDG dashboard query'),
+    withSupabaseTimeout(supabase.from('health_indicators').select('*'), 'Health dashboard query')
   ]);
   if (resSdgs.error) throw resSdgs.error;
   if (resHealth.error) throw resHealth.error;
@@ -103,7 +103,8 @@ export default function DashboardOverview() {
     queryKey: ['overviewData'],
     queryFn: fetchAllDashboards,
     refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000
+    staleTime: 5 * 60 * 1000,
+    retry: 0,
   });
 
   /* ── Data Processing (ไม่เปลี่ยน logic) ── */
@@ -205,6 +206,7 @@ export default function DashboardOverview() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-rose-500">
         <AlertOctagon size={48} />
         <p className="font-bold text-slate-700">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+        {error?.message && <p className="text-sm text-slate-500 text-center max-w-xl">{error.message}</p>}
       </div>
     );
   }
@@ -246,17 +248,17 @@ export default function DashboardOverview() {
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
           {/* Left: Main Metric */}
           <div>
-            <p className="text-white/50 font-bold uppercase tracking-[0.3em] text-xs mb-2 flex items-center gap-2">
+            <p className="text-white font-bold uppercase tracking-[0.3em] text-sm mb-2 flex items-center gap-2">
               <Target size={12} /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค — ปี 2569
             </p>
             <div className="flex items-end gap-4 mb-3">
-              <span className="text-7xl md:text-8xl font-black tracking-tighter tabular-nums leading-none">{passedPct}</span>
+              <span className="text-[5.25rem] md:text-[6rem] font-black tracking-tighter tabular-nums leading-none">{passedPct}</span>
               <div className="pb-2">
-                <span className="text-3xl font-black text-white/70">%</span>
-                <p className="text-white/60 text-sm font-bold uppercase tracking-wider">ภาพรวมการดำเนินงาน</p>
+                <span className="text-[2.1rem] font-black text-white">%</span>
+                <p className="text-white text-base font-bold uppercase tracking-wider">ภาพรวมการดำเนินงาน</p>
               </div>
             </div>
-            <p className="text-white/40 text-sm font-medium">
+            <p className="text-white text-base font-medium">
               บรรลุเป้าหมาย <span className="text-white font-black">{stats.totalPassed}</span> จาก <span className="text-white font-black">{stats.totalKPIs}</span> ตัวชี้วัดทั้งหมด
             </p>
           </div>
@@ -266,29 +268,29 @@ export default function DashboardOverview() {
             <div className="flex items-center gap-2.5 bg-emerald-500/20 border border-emerald-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
               <CheckCircle2 size={18} className="text-emerald-400" />
               <div>
-                <p className="text-2xl font-black text-white tabular-nums leading-none">{stats.totalPassed}</p>
-                <p className="text-emerald-300 text-[10px] font-bold uppercase tracking-wider">บรรลุเป้าหมาย</p>
+                <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">{stats.totalPassed}</p>
+                <p className="text-white text-xs font-bold uppercase tracking-wider">บรรลุเป้าหมาย</p>
               </div>
             </div>
             <div className="flex items-center gap-2.5 bg-amber-500/20 border border-amber-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
               <AlertTriangle size={18} className="text-amber-400" />
               <div>
-                <p className="text-2xl font-black text-white tabular-nums leading-none">{stats.totalWarning}</p>
-                <p className="text-amber-300 text-[10px] font-bold uppercase tracking-wider">เฝ้าระวัง</p>
+                <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">{stats.totalWarning}</p>
+                <p className="text-white text-xs font-bold uppercase tracking-wider">เฝ้าระวัง</p>
               </div>
             </div>
             <div className="flex items-center gap-2.5 bg-orange-500/20 border border-orange-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
               <AlertOctagon size={18} className="text-orange-400" />
               <div>
-                <p className="text-2xl font-black text-white tabular-nums leading-none">{stats.totalAtRisk}</p>
-                <p className="text-orange-300 text-[10px] font-bold uppercase tracking-wider">ระดับเสี่ยง</p>
+                <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">{stats.totalAtRisk}</p>
+                <p className="text-white text-xs font-bold uppercase tracking-wider">ระดับเสี่ยง</p>
               </div>
             </div>
             <div className={`flex items-center gap-2.5 border backdrop-blur-sm px-5 py-3 rounded-2xl ${stats.totalCritical > 0 ? 'bg-rose-500/30 border-rose-400/50 pulse-ring-rose' : 'bg-rose-500/10 border-rose-400/20'}`}>
               <XCircle size={18} className="text-rose-400" />
               <div>
-                <p className="text-2xl font-black text-white tabular-nums leading-none">{stats.totalCritical}</p>
-                <p className="text-rose-300 text-[10px] font-bold uppercase tracking-wider">ขั้นวิกฤติ</p>
+                <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">{stats.totalCritical}</p>
+                <p className="text-white text-xs font-bold uppercase tracking-wider">ขั้นวิกฤติ</p>
               </div>
             </div>
           </div>
@@ -308,8 +310,8 @@ export default function DashboardOverview() {
                 <AlertOctagon size={18} className="text-rose-600" />
               </div>
               <div>
-                <h2 className="font-black text-slate-800 text-sm">รายการที่ต้องเร่งดำเนินการ</h2>
-                <p className="text-xs text-slate-400 font-medium">ตัวชี้วัดที่ยังต่ำกว่าเป้าหมาย ({actionItems.length} รายการ)</p>
+                <h2 className="font-black text-slate-950 text-base">รายการที่ต้องเร่งดำเนินการ</h2>
+                <p className="text-sm text-slate-950 font-medium">ตัวชี้วัดที่ยังต่ำกว่าเป้าหมาย ({actionItems.length} รายการ)</p>
               </div>
             </div>
           </div>
@@ -317,7 +319,7 @@ export default function DashboardOverview() {
             {actionItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 gap-2 text-slate-300">
                 <ShieldCheck size={36} />
-                <p className="font-bold text-sm">ทุกตัวชี้วัดผ่านเป้าหมาย</p>
+                <p className="font-bold text-base text-slate-950">ทุกตัวชี้วัดผ่านเป้าหมาย</p>
               </div>
             ) : (
               actionItems.slice(0, 5).map((kpi, i) => {
@@ -328,15 +330,15 @@ export default function DashboardOverview() {
                   <div key={kpi.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/70 transition-colors group">
                     <span className={`w-7 h-7 rounded-lg ${rankColor} text-white text-xs font-black flex items-center justify-center flex-shrink-0`}>{rank}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-slate-700 text-sm truncate group-hover:text-slate-900 transition-colors">{kpi.title}</p>
+                      <p className="font-bold text-slate-950 text-base truncate group-hover:text-slate-950 transition-colors">{kpi.title}</p>
                       <div className="flex items-center gap-3 mt-0.5">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{kpi.system}</span>
-                        {kpi.target && <span className="text-[10px] text-slate-300">เป้า: {kpi.target}</span>}
+                        <span className="text-xs font-bold text-slate-950 uppercase tracking-wider">{kpi.system}</span>
+                        {kpi.target && <span className="text-xs text-slate-950">เป้า: {kpi.target}</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
                       {kpi.performance && (
-                        <span className="text-xl font-black text-slate-700 tabular-nums">{kpi.performance}</span>
+                        <span className="text-[1.4rem] font-black text-slate-950 tabular-nums">{kpi.performance}</span>
                       )}
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border ${s.bg} ${s.text} ${s.border}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
@@ -357,7 +359,7 @@ export default function DashboardOverview() {
 
         {/* System Health Donut (1/3 width) */}
         <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-6 flex flex-col items-center justify-center gap-4">
-          <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">System Health</p>
+              <p className="text-sm font-black text-slate-950 uppercase tracking-[0.2em]">System Health</p>
           <div className="relative">
             <DonutRing
               percent={passedPct}
@@ -366,8 +368,8 @@ export default function DashboardOverview() {
               stroke={14}
             />
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-4xl font-black text-slate-800 tabular-nums leading-none">{passedPct}</span>
-              <span className="text-lg font-black text-slate-400">%</span>
+              <span className="text-[2.8rem] font-black text-slate-950 tabular-nums leading-none">{passedPct}</span>
+              <span className="text-[1.2rem] font-black text-slate-950">%</span>
             </div>
           </div>
           <div className="w-full space-y-2">
@@ -379,8 +381,8 @@ export default function DashboardOverview() {
             ].map(item => (
               <div key={item.label} className="flex items-center gap-2">
                 <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${item.color}`} />
-                <span className="text-xs text-slate-500 flex-1">{item.label}</span>
-                <span className="text-xs font-black text-slate-700 tabular-nums">{item.val}</span>
+                <span className="text-sm text-slate-950 flex-1">{item.label}</span>
+                <span className="text-sm font-black text-slate-950 tabular-nums">{item.val}</span>
               </div>
             ))}
           </div>
@@ -400,11 +402,11 @@ export default function DashboardOverview() {
                 <Layers size={18} className="text-sky-600" />
               </div>
               <div>
-                <h3 className="font-black text-slate-800">เป้าหมายสากล SDGs</h3>
-                <p className="text-xs text-slate-400 font-medium">Sustainable Development Goals</p>
+                <h3 className="text-[1.1rem] font-black text-slate-950">เป้าหมายสากล SDGs</h3>
+                <p className="text-sm text-slate-950 font-medium">Sustainable Development Goals</p>
               </div>
             </div>
-            <button onClick={() => navigate('/sdgs')} className="flex items-center gap-1 text-xs font-bold text-sky-500 hover:text-sky-700 transition-colors mt-1 flex-shrink-0">
+            <button onClick={() => navigate('/sdgs')} className="flex items-center gap-1 text-sm font-bold text-sky-700 hover:text-sky-900 transition-colors mt-1 flex-shrink-0">
               ดูรายละเอียด <ArrowRight size={12} />
             </button>
           </div>
@@ -413,8 +415,8 @@ export default function DashboardOverview() {
             <div className="relative flex-shrink-0">
               <DonutRing percent={sdgPct} color="#0ea5e9" size={100} stroke={10} />
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-black text-slate-800 tabular-nums leading-none">{sdgPct}</span>
-                <span className="text-xs font-bold text-slate-400">%</span>
+                <span className="text-[1.7rem] font-black text-slate-950 tabular-nums leading-none">{sdgPct}</span>
+                <span className="text-sm font-bold text-slate-950">%</span>
               </div>
             </div>
             <div className="flex-1 grid grid-cols-2 gap-3">
@@ -425,8 +427,8 @@ export default function DashboardOverview() {
                 { label: 'วิกฤติ',    val: stats.sdgsStats.critical, color: 'text-rose-600' },
               ].map(item => (
                 <div key={item.label} className="bg-slate-50 rounded-2xl p-3 text-center">
-                  <p className={`text-2xl font-black tabular-nums ${item.color}`}>{item.val}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{item.label}</p>
+                  <p className={`text-[1.7rem] font-black tabular-nums ${item.color}`}>{item.val}</p>
+                  <p className="text-xs font-bold text-slate-950 uppercase tracking-wider mt-0.5">{item.label}</p>
                 </div>
               ))}
             </div>
@@ -446,11 +448,11 @@ export default function DashboardOverview() {
                 <BarChart2 size={18} className="text-emerald-600" />
               </div>
               <div>
-                <h3 className="font-black text-slate-800">ตัวชี้วัดสาธารณสุข</h3>
-                <p className="text-xs text-slate-400 font-medium">Health KPI — ระดับกระทรวง</p>
+                <h3 className="text-[1.1rem] font-black text-slate-950">ตัวชี้วัดสาธารณสุข</h3>
+                <p className="text-sm text-slate-950 font-medium">Health KPI — ระดับกระทรวง</p>
               </div>
             </div>
-            <button onClick={() => navigate('/healthkpi')} className="flex items-center gap-1 text-xs font-bold text-emerald-500 hover:text-emerald-700 transition-colors mt-1 flex-shrink-0">
+            <button onClick={() => navigate('/healthkpi')} className="flex items-center gap-1 text-sm font-bold text-emerald-700 hover:text-emerald-900 transition-colors mt-1 flex-shrink-0">
               ดูรายละเอียด <ArrowRight size={12} />
             </button>
           </div>
@@ -459,8 +461,8 @@ export default function DashboardOverview() {
             <div className="relative flex-shrink-0">
               <DonutRing percent={healthPct} color="#10b981" size={100} stroke={10} />
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-black text-slate-800 tabular-nums leading-none">{healthPct}</span>
-                <span className="text-xs font-bold text-slate-400">%</span>
+                <span className="text-[1.7rem] font-black text-slate-950 tabular-nums leading-none">{healthPct}</span>
+                <span className="text-sm font-bold text-slate-950">%</span>
               </div>
             </div>
             <div className="flex-1 grid grid-cols-2 gap-3">
@@ -471,8 +473,8 @@ export default function DashboardOverview() {
                 { label: 'วิกฤติ',    val: stats.healthStats.critical, color: 'text-rose-600' },
               ].map(item => (
                 <div key={item.label} className="bg-slate-50 rounded-2xl p-3 text-center">
-                  <p className={`text-2xl font-black tabular-nums ${item.color}`}>{item.val}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{item.label}</p>
+                  <p className={`text-[1.7rem] font-black tabular-nums ${item.color}`}>{item.val}</p>
+                  <p className="text-xs font-bold text-slate-950 uppercase tracking-wider mt-0.5">{item.label}</p>
                 </div>
               ))}
             </div>
@@ -495,15 +497,15 @@ export default function DashboardOverview() {
               <TrendingUp size={16} className="text-slate-600" />
             </div>
             <div>
-              <h2 className="font-black text-slate-800 text-sm">สรุปผลตัวชี้วัดทั้งหมด</h2>
-              <p className="text-xs text-slate-400 font-medium">
+              <h2 className="font-black text-slate-950 text-base">สรุปผลตัวชี้วัดทั้งหมด</h2>
+              <p className="text-sm text-slate-950 font-medium">
                 {showAll ? `แสดงทั้งหมด ${stats.allIndicators.length} รายการ` : `แสดงเฉพาะรายการที่ต้องติดตาม ${tableItems.length} รายการ`}
               </p>
             </div>
           </div>
           <button
             onClick={() => setShowAll(v => !v)}
-            className="text-xs font-bold px-4 py-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center gap-1.5"
+            className="text-sm font-bold px-4 py-2 rounded-xl border border-slate-200 text-slate-950 hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center gap-1.5"
           >
             {showAll ? 'แสดงเฉพาะรายการสำคัญ' : 'แสดงทั้งหมด'}
             <ArrowRight size={12} className={`transition-transform ${showAll ? 'rotate-180' : ''}`} />
@@ -514,11 +516,11 @@ export default function DashboardOverview() {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
-                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest w-24">ระบบ</th>
-                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">ตัวชี้วัด</th>
-                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right w-28">ผลงาน</th>
-                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right w-28">เป้าหมาย</th>
-                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center w-32">สถานะ</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-950 uppercase tracking-widest w-24">ระบบ</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-950 uppercase tracking-widest">ตัวชี้วัด</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-950 uppercase tracking-widest text-right w-28">ผลงาน</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-950 uppercase tracking-widest text-right w-28">เป้าหมาย</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-950 uppercase tracking-widest text-center w-32">สถานะ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -527,7 +529,7 @@ export default function DashboardOverview() {
                   <td colSpan={5} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-2 text-slate-300">
                       <ShieldCheck size={32} />
-                      <p className="font-bold text-sm">ทุกตัวชี้วัดบรรลุเป้าหมาย</p>
+                      <p className="font-bold text-base text-slate-950">ทุกตัวชี้วัดบรรลุเป้าหมาย</p>
                     </div>
                   </td>
                 </tr>
@@ -543,16 +545,16 @@ export default function DashboardOverview() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="font-bold text-slate-700 text-sm leading-tight group-hover:text-slate-900 transition-colors line-clamp-2">{kpi.title}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5 italic">{kpi.category}</p>
+                        <p className="font-bold text-slate-950 text-base leading-tight group-hover:text-slate-950 transition-colors line-clamp-2">{kpi.title}</p>
+                        <p className="text-xs text-slate-950 mt-0.5 italic">{kpi.category}</p>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <span className={`text-lg font-black tabular-nums ${kpi.performance ? 'text-slate-800' : 'text-slate-300'}`}>
+                        <span className={`text-[1.2rem] font-black tabular-nums ${kpi.performance ? 'text-slate-950' : 'text-slate-400'}`}>
                           {kpi.performance || '—'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <span className="text-sm font-bold text-slate-400">{kpi.target || '—'}</span>
+                        <span className="text-base font-bold text-slate-950">{kpi.target || '—'}</span>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${s.bg} ${s.text} ${s.border}`}>
@@ -569,7 +571,7 @@ export default function DashboardOverview() {
         </div>
 
         <div className="px-6 py-3 bg-slate-50 border-t border-slate-100">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">
+          <p className="text-xs font-black text-slate-950 uppercase tracking-[0.3em] text-center">
             © 2026 KPI Monitoring System — กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
           </p>
         </div>

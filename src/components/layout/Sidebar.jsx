@@ -1,8 +1,12 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Activity, Settings, Edit, Target, X, Table2, HeartPulse } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Activity, Settings, Edit, Target, X, Table2, HeartPulse, LogIn, LogOut } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Sidebar({ onClose, isMobile }) {
+  const { isAdmin, isAuthenticated, user, office, signOut } = useAuth();
+  const navigate = useNavigate();
+
   const menuGroups = [
     {
       title: 'Main',
@@ -12,7 +16,7 @@ export default function Sidebar({ onClose, isMobile }) {
         { label: 'แดชบอร์ด Health KPI', icon: Target, path: '/healthkpi' },
       ],
     },
-    {
+    isAdmin && {
       title: 'Admin',
       items: [
         { label: 'บันทึกข้อมูล SDGs',          icon: Edit,       path: '/entry' },
@@ -22,7 +26,7 @@ export default function Sidebar({ onClose, isMobile }) {
         { label: 'ตั้งค่าระบบ',                 icon: Settings,   path: '/settings' },
       ],
     },
-  ];
+  ].filter(Boolean);
 
   return (
     <aside className="w-64 min-h-screen flex flex-col text-slate-700 relative h-full">
@@ -67,17 +71,36 @@ export default function Sidebar({ onClose, isMobile }) {
         ))}
       </nav>
       
-      <div className="p-6 border-t border-slate-200 m-4 bg-slate-50 rounded-2xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-sm font-bold text-white shadow-md ring-2 ring-white">
-            AD
+      {isAuthenticated ? (
+        <div className="p-4 border-t border-slate-200 m-4 bg-slate-50 rounded-2xl flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-sm font-bold text-white shadow-md ring-2 ring-white shrink-0">
+              {user?.email?.charAt(0).toUpperCase() || 'A'}
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-sm font-bold text-slate-800 tracking-wide truncate">{user?.email?.split('@')[0] || 'Admin User'}</p>
+              <p className="text-xs text-slate-500 truncate">{office || 'Central Office'}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-bold text-slate-800 tracking-wide">Admin User</p>
-            <p className="text-xs text-slate-500">Central Office</p>
-          </div>
+          <button
+            onClick={() => signOut()}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-colors"
+          >
+            <LogOut size={16} />
+            <span>ออกจากระบบ</span>
+          </button>
         </div>
-      </div>
+      ) : (
+        <div className="p-4 mt-auto mb-4 mx-4 border-t border-slate-200 pt-6">
+          <button
+            onClick={() => navigate('/admin/login')}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-2xl text-sm font-bold text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+          >
+            <LogIn size={18} />
+            <span>เข้าสู่ระบบ Admin</span>
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

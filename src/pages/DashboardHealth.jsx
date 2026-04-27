@@ -3,16 +3,19 @@ import { useQuery } from '@tanstack/react-query';
 import { Activity, Target, CheckCircle2, XCircle, AlertTriangle, Users, Calendar, Filter, Download, FileText, MapPin, PieChart } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell, PieChart as RePieChart, Pie } from 'recharts';
 import ThailandMap from '../components/charts/ThailandMap';
-import { supabase } from '../lib/supabase';
+import { supabase, withSupabaseTimeout } from '../lib/supabase';
 
 
 
 const fetchHealthData = async () => {
-  const { data, error } = await supabase
-    .from('health_indicators')
-    .select('*')
-    .eq('is_deleted', false)   // ← กรองรายการที่ถูก Soft Delete ออก
-    .order('indicator_name', { ascending: true });
+  const { data, error } = await withSupabaseTimeout(
+    supabase
+      .from('health_indicators')
+      .select('*')
+      .eq('is_deleted', false)   // ← กรองรายการที่ถูก Soft Delete ออก
+      .order('indicator_name', { ascending: true }),
+    'Health KPI page query'
+  );
     
   if (error) throw error;
   return data;
@@ -87,6 +90,7 @@ export default function DashboardHealth() {
     queryFn: fetchHealthData,
     refetchOnWindowFocus: true,  // ← refresh เมื่อ user กลับมาที่ tab
     staleTime: 0,                // ← ไม่ cache — ดึงใหม่ทันทีเมื่อ invalidate
+    retry: 0,
   });
 
   const currentQ = useMemo(() => getCurrentQuarter(), []);
