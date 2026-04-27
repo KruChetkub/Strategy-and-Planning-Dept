@@ -31,7 +31,11 @@ export default function AdminLogin() {
 
     const { error: signInError } = await signIn(email, password);
     if (signInError) {
-      setError(signInError.message);
+      let displayError = signInError.message;
+      if (displayError === 'Invalid login credentials') {
+        displayError = 'อีเมลไม่ถูกต้อง หรือรหัสผ่านผิด';
+      }
+      setError(displayError);
       setSubmitting(false);
       return;
     }
@@ -92,13 +96,7 @@ export default function AdminLogin() {
             เข้าสู่ระบบผู้ดูแล
           </button>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
-            <div className="flex items-center gap-2 font-bold text-slate-950 mb-1">
-              <ShieldCheck size={16} className="text-emerald-600" />
-              สิทธิ์หลังจากเข้าสู่ระบบ
-            </div>
-            <p>ถ้าบัญชีนี้มี role เป็น `admin` หรือ `central_office` ระบบจะแสดงเมนู ADMIN และอนุญาตให้เข้าหน้าจัดการข้อมูล</p>
-          </div>
+
         </form>
       </div>
     </div>
