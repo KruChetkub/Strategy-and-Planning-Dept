@@ -29,7 +29,7 @@ function parsePastedData(raw) {
 /* ─────────────────────────────────────────────────────────────────────────────
    MAP TO SUPABASE SCHEMA (sdg_indicators table)
 ───────────────────────────────────────────────────────────────────────────── */
-function mapToSupabase(item) {
+function mapToSupabase(item, fiscalYear, period) {
   const perf = parseFloat(item.currentPerformance);
   return {
     category: item.subTarget || null,
@@ -37,6 +37,8 @@ function mapToSupabase(item) {
     target_2030: item.target2030 || null,
     current_performance: isNaN(perf) ? null : perf,
     description: item.note || null,
+    fiscal_year: fiscalYear,
+    period: period
   };
 }
 
@@ -48,6 +50,8 @@ export default function ManageKPIs() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null); // { success: n, error: msg | null }
   const [showPreview, setShowPreview] = useState(false);
+  const [fiscalYear, setFiscalYear] = useState('2569');
+  const [period, setPeriod] = useState('Q4');
 
   /* ── Parse preview from pasted text ── */
   const previewRows = useMemo(() => {
@@ -63,7 +67,7 @@ export default function ManageKPIs() {
     setResult(null);
 
     try {
-      const payload = previewRows.map(mapToSupabase);
+      const payload = previewRows.map(row => mapToSupabase(row, fiscalYear, period));
 
       const { error } = await supabase
         .from('sdg_indicators')
@@ -167,6 +171,24 @@ export default function ManageKPIs() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-violet-100/30 rounded-full blur-[80px] pointer-events-none" />
 
         <div className="relative z-10 space-y-2">
+          <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <div className="flex-1 space-y-2">
+              <label className="block text-sm font-black text-slate-700">ปีงบประมาณ</label>
+              <select value={fiscalYear} onChange={e => setFiscalYear(e.target.value)} className={inputClass}>
+                {['2567', '2568', '2569', '2570'].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div className="flex-1 space-y-2">
+              <label className="block text-sm font-black text-slate-700">ไตรมาส / รอบประเมิน</label>
+              <select value={period} onChange={e => setPeriod(e.target.value)} className={inputClass}>
+                <option value="Q1">ไตรมาส 1 (ต.ค. - ธ.ค.)</option>
+                <option value="Q2">ไตรมาส 2 (ม.ค. - มี.ค.)</option>
+                <option value="Q3">ไตรมาส 3 (เม.ย. - มิ.ย.)</option>
+                <option value="Q4">ไตรมาส 4 (ก.ค. - ก.ย.)</option>
+                <option value="Year-End">ภาพรวมทั้งปี (Year-End)</option>
+              </select>
+            </div>
+          </div>
           <div className="flex items-center justify-between">
             <label className="block text-sm font-black text-slate-700">
               Ctrl+V วางข้อมูลจาก Excel ตรงนี้ 👇

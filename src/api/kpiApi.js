@@ -1,23 +1,31 @@
 import { supabase } from '../lib/supabase';
 
 // Fetch all SDG indicators
-export async function fetchSDGIndicators() {
-  const { data, error } = await supabase
+export async function fetchSDGIndicators(year = '2569', period = 'Q4') {
+  let query = supabase
     .from('sdg_indicators')
     .select('*')
     .order('indicator_name', { ascending: true });
+    
+  if (year && year !== 'All') query = query.eq('fiscal_year', year);
+  if (period && period !== 'All') query = query.eq('period', period);
   
+  const { data, error } = await query;
   if (error) throw error;
   return data;
 }
 
 // Fetch all Health KPI indicators (aggregated or specific)
-export async function fetchHealthIndicators() {
-  const { data, error } = await supabase
+export async function fetchHealthIndicators(year = '2569', period = 'Q4') {
+  let query = supabase
     .from('health_indicators')
     .select('*')
     .order('indicator_name', { ascending: true });
+    
+  if (year && year !== 'All') query = query.eq('fiscal_year', year);
+  if (period && period !== 'All') query = query.eq('period', period);
   
+  const { data, error } = await query;
   if (error) throw error;
   return data;
 }
@@ -47,3 +55,4 @@ export function evaluateKPIStatus(current, targetString) {
   if (percentage >= 50) return { color: 'text-orange-400', raw: 'failed_50', text: 'เสี่ยง' };
   return { color: 'text-rose-500', raw: 'failed_0', text: 'วิกฤติ' };
 }
+

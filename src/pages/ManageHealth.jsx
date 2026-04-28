@@ -61,13 +61,18 @@ const STATUS_STYLE = {
 /* ─────────────────────────────────────────────────────────────────────────────
    FETCH
 ───────────────────────────────────────────────────────────────────────────── */
-const fetchHealth = async () => {
-  const { data, error } = await supabase
+const fetchHealth = async (year, period) => {
+  let query = supabase
     .from('health_indicators')
-    .select('id, indicator_name, kpi_group, region, a_value, b_value, performance, target_q1, target_q2, target_q3, target_q4')
+    .select('id, indicator_name, kpi_group, region, a_value, b_value, performance, target_q1, target_q2, target_q3, target_q4, fiscal_year, period')
     .eq('is_deleted', false)
     .order('indicator_name', { ascending: true })
     .order('kpi_group',      { ascending: true });
+    
+  if (year && year !== 'All') query = query.eq('fiscal_year', year);
+  if (period && period !== 'All') query = query.eq('period', period);
+
+  const { data, error } = await query;
   // หมายเหตุ: ไม่ใช้ .order('region') เพราะ PostgreSQL เรียง string ไม่ถูก
   // จะเรียง region ฝั่ง client ด้วย regionSortIndex แทน
   if (error) throw error;
@@ -234,9 +239,12 @@ export default function ManageHealth() {
   const queryClient = useQueryClient();
   const qKey = getCurrentQuarterKey();
 
+  const [fiscalYear, setFiscalYear] = useState('All');
+  const [period, setPeriod]         = useState('All');
+
   const { data: rows = [], isLoading, error } = useQuery({
-    queryKey: ['manage-health'],
-    queryFn: fetchHealth,
+    queryKey: ['manage-health', fiscalYear, period],
+    queryFn: () => fetchHealth(fiscalYear, period),
     staleTime: 0,
   });
 
@@ -320,6 +328,8 @@ export default function ManageHealth() {
         target_q2:      form.target_q2?.trim()      || null,
         target_q3:      form.target_q3?.trim()      || null,
         target_q4:      form.target_q4?.trim()      || null,
+        fiscal_year:    fiscalYear === 'All' ? '2569' : fiscalYear,
+        period:         period === 'All' ? 'Q4' : period,
       };
       if (id) {
         const { error } = await supabase.from('health_indicators').update(payload).eq('id', id);
@@ -427,6 +437,20 @@ export default function ManageHealth() {
 
       {/* ══ SEARCH + CONTROLS ══ */}
       <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm flex flex-wrap items-center gap-3">
+        <select value={fiscalYear} onChange={e => setFiscalYear(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-400/20">
+          <option value="All">ทุกปีงบประมาณ</option>
+          {['2567', '2568', '2569', '2570'].map(y => <option key={y} value={y}>ปี {y}</option>)}
+        </select>
+        <select value={period} onChange={e => setPeriod(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-400/20">
+          <option value="All">ทุกไตรมาส</option>
+          <option value="Q1">Q1</option>
+          <option value="Q2">Q2</option>
+          <option value="Q3">Q3</option>
+          <option value="Q4">Q4</option>
+          <option value="Year-End">Year-End</option>
+        </select>
+        <div className="w-px h-6 bg-slate-200 mx-1" />
+        
         <div className="relative flex-1 min-w-[200px]">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}

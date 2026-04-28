@@ -18,7 +18,9 @@ export default function DataEntryHealth() {
     targetQ1: '>= 50.00',    // เป้าหมาย Q1
     targetQ2: '>= 50.00',    // เป้าหมาย Q2
     targetQ3: '>= 60.00',    // เป้าหมาย Q3
-    targetQ4: '>= 70.00'     // เป้าหมาย Q4
+    targetQ4: '>= 70.00',    // เป้าหมาย Q4
+    fiscalYear: '2569',      // ปีงบประมาณ
+    period: 'Q4'             // ไตรมาส
   });
 
   const handleChange = (e) => {
@@ -42,7 +44,9 @@ export default function DataEntryHealth() {
           target_q1: formData.targetQ1,
           target_q2: formData.targetQ2,
           target_q3: formData.targetQ3,
-          target_q4: formData.targetQ4
+          target_q4: formData.targetQ4,
+          fiscal_year: formData.fiscalYear,
+          period: formData.period
         }]);
 
       if (insertError) throw insertError;
@@ -54,7 +58,9 @@ export default function DataEntryHealth() {
         setFormData({
           indicatorName: '', subIndicatorName: '', region: '',
           A: '', B: '', performance: '',
-          targetQ1: '>= 50.00', targetQ2: '>= 50.00', targetQ3: '>= 60.00', targetQ4: '>= 70.00'
+          targetQ1: '>= 50.00', targetQ2: '>= 50.00', targetQ3: '>= 60.00', targetQ4: '>= 70.00',
+          fiscalYear: formData.fiscalYear,
+          period: formData.period
         });
       } else {
         // โหมด Save & Next: เก็บชื่อตัวชี้วัดและเป้าหมายไว้ แต่ล้าง "เขต" และ "ตัวเลขผลงาน" เพื่อให้ไปลุยเขตอื่นต่อ
@@ -150,6 +156,24 @@ export default function DataEntryHealth() {
           {/* ข้อมูลทั่วไป */}
           <div className="lg:col-span-3 pb-2 border-b border-slate-200">
              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Target size={18} className="text-emerald-600"/> General Information</h2>
+          </div>
+
+          <div className="space-y-2">
+            <label className={labelClass}>ปีงบประมาณ</label>
+            <select name="fiscalYear" required value={formData.fiscalYear} onChange={handleChange} className={`${inputClass} appearance-none cursor-pointer font-bold text-emerald-800`}>
+              {['2567', '2568', '2569', '2570'].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+
+          <div className="space-y-2 lg:col-span-2">
+            <label className={labelClass}>ไตรมาส / รอบประเมิน</label>
+            <select name="period" required value={formData.period} onChange={handleChange} className={`${inputClass} appearance-none cursor-pointer font-bold text-emerald-800`}>
+              <option value="Q1">ไตรมาส 1 (ต.ค. - ธ.ค.)</option>
+              <option value="Q2">ไตรมาส 2 (ม.ค. - มี.ค.)</option>
+              <option value="Q3">ไตรมาส 3 (เม.ย. - มิ.ย.)</option>
+              <option value="Q4">ไตรมาส 4 (ก.ค. - ก.ย.)</option>
+              <option value="Year-End">ภาพรวมทั้งปี (Year-End)</option>
+            </select>
           </div>
 
           <div className="space-y-2 lg:col-span-2">

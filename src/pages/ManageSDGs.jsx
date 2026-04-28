@@ -29,12 +29,17 @@ const extractLabel = (cat = '', code) => {
 /* ─────────────────────────────────────────────────────────────────────────────
    FETCH
 ───────────────────────────────────────────────────────────────────────────── */
-const fetchSDGs = async () => {
-  const { data, error } = await supabase
+const fetchSDGs = async (year, period) => {
+  let query = supabase
     .from('sdg_indicators')
-    .select('id, category, indicator_name, target_2030, current_performance, description')
+    .select('id, category, indicator_name, target_2030, current_performance, description, fiscal_year, period')
     .eq('is_deleted', false)
     .order('category', { ascending: true });
+
+  if (year && year !== 'All') query = query.eq('fiscal_year', year);
+  if (period && period !== 'All') query = query.eq('period', period);
+
+  const { data, error } = await query;
   if (error) throw error;
   return data;
 };
@@ -165,9 +170,12 @@ function GroupHeader({ cat, count, isOpen, onToggle }) {
 export default function ManageSDGs() {
   const queryClient = useQueryClient();
 
+  const [fiscalYear, setFiscalYear] = useState('All');
+  const [period, setPeriod]         = useState('All');
+
   const { data: kpis = [], isLoading, error } = useQuery({
-    queryKey: ['manage-sdgs'],
-    queryFn: fetchSDGs,
+    queryKey: ['manage-sdgs', fiscalYear, period],
+    queryFn: () => fetchSDGs(fiscalYear, period),
     staleTime: 0,
   });
 
@@ -241,6 +249,8 @@ export default function ManageSDGs() {
         target_2030:         form.target_2030.trim() || null,
         current_performance: parseFloat(form.current_performance) || null,
         description:         form.description.trim() || null,
+        fiscal_year:         fiscalYear === 'All' ? '2569' : fiscalYear,
+        period:              period === 'All' ? 'Year-End' : period,
       };
 
       if (id) {
@@ -388,6 +398,20 @@ export default function ManageSDGs() {
 
       {/* ══ SEARCH + ACCORDION CONTROLS ══ */}
       <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm flex flex-wrap items-center gap-3">
+        <select value={fiscalYear} onChange={e => setFiscalYear(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-violet-400/20">
+          <option value="All">ทุกปีงบประมาณ</option>
+          {['2567', '2568', '2569', '2570'].map(y => <option key={y} value={y}>ปี {y}</option>)}
+        </select>
+        <select value={period} onChange={e => setPeriod(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-violet-400/20">
+          <option value="All">ทุกไตรมาส</option>
+          <option value="Q1">Q1</option>
+          <option value="Q2">Q2</option>
+          <option value="Q3">Q3</option>
+          <option value="Q4">Q4</option>
+          <option value="Year-End">Year-End</option>
+        </select>
+        <div className="w-px h-6 bg-slate-200 mx-1" />
+
         <div className="relative flex-1 min-w-[200px]">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}

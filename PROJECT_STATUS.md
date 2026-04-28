@@ -1,6 +1,6 @@
 # 📑 KPI Monitoring System - Project Status & Documentation
 
-ฉบับอัปเดตล่าสุด: **2026-04-27**
+ฉบับอัปเดตล่าสุด: **2026-04-28**
 
 ---
 
@@ -12,7 +12,19 @@
 
 ---
 
-## 🛡️ อัปเดตล่าสุด (2026-04-27) - Security & UX Polish
+## 🛡️ อัปเดตล่าสุด (2026-04-28) - Historical Data Snapshots & UI Polish
+- **ระบบตัวกรองข้อมูลย้อนหลัง (Global Temporal Filtering / Phase 4)**: 
+  - เพิ่มตัวกรอง "ปีงบประมาณ" (Fiscal Year) และ "ไตรมาส" (Period) ในหน้าแดชบอร์ดทั้งหมด (`DashboardOverview`, `Dashboard` (SDGs), `DashboardHealth`)
+  - ซิงค์สถานะตัวกรองผ่าน URL Parameters (`?year=...&period=...`) ทำให้สามารถแชร์ลิงก์หรือรีเฟรชหน้าแล้วค่าไม่หาย
+  - ปรับ Default เป็น "ทุกปี/ทุกไตรมาส" (All) เพื่อรองรับข้อมูลเก่าที่ยังไม่มีปี/ไตรมาส
+  - อัปเดต `useQuery` hooks และ `kpiApi.js` ให้ดึงข้อมูลตาม Filter ที่เลือก
+- **UI/UX Polish**:
+  - จัดเรียงตำแหน่งตัวกรอง ปีงบประมาณ และ ไตรมาส ให้เป็นระเบียบ ไม่ซ้อนทับกับหัวข้อ และปรับแก้ Syntax Error ( JSX Unicode Escape ) 
+  - ปรับขนาดตัวอักษรของตัวกรองให้ใหญ่ขึ้น (`11px` เป็น `13px`) และเปลี่ยนสีให้เป็นสีดำเข้ม (`text-slate-900`, `font-black`) เพื่อการมองเห็นที่ชัดเจนขึ้นตามมาตรฐานผู้บริหาร
+
+---
+
+## 📌 อัปเดตก่อนหน้า (2026-04-27) - Security & UX Polish
 - **ระบบ Login และ Auth Routing**: 
   - แก้ไข `AuthContext.jsx` ให้ยอมรับ Role พื้นฐาน (`authenticated`) สามารถเข้าใช้งานหน้า Admin ได้ เพื่อแก้ปัญหาถูกบล็อกหลังล็อกอิน
   - ปรับปรุง `AdminLogin.jsx` ให้บังคับ Redirect ไปที่แดชบอร์ดหลัก (`/`) ทุกครั้งหลังล็อกอินสำเร็จ
@@ -198,9 +210,8 @@ calc_type = "direct"  → กรอกแค่ performance (%) ตรงๆ
 | ลำดับ | งาน | ความสำคัญ |
 |---|---|---|
 | 1 | พัฒนา `calc_type` Architecture สำหรับ Health KPI | 🟢 ต่ำ (Future) |
-| 2 | Historical Snapshots (บันทึกข้อมูลย้อนหลังรายปี/ไตรมาส) | 🟢 ต่ำ (Future) |
-| 3 | Export Reports (PDF / Excel) | 🟢 ต่ำ (Future) |
+| 2 | Export Reports (PDF / Excel) | 🟢 ต่ำ (Future) |
 
 ---
 
-*จัดทำโดย: Pichet & AI Assistant | อัปเดตล่าสุด: 2026-04-27*
+*จัดทำโดย: Pichet & AI Assistant | อัปเดตล่าสุด: 2026-04-28*

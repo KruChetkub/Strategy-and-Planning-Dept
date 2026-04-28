@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { Activity, Target, CheckCircle2, XCircle, AlertTriangle, Users, Calendar, Filter, Download, FileText, MapPin, PieChart } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell, PieChart as RePieChart, Pie } from 'recharts';
 import ThailandMap from '../components/charts/ThailandMap';
@@ -7,15 +8,17 @@ import { supabase, withSupabaseTimeout } from '../lib/supabase';
 
 
 
-const fetchHealthData = async () => {
-  const { data, error } = await withSupabaseTimeout(
-    supabase
+const fetchHealthData = async (year, period) => {
+  let query = supabase
       .from('health_indicators')
       .select('*')
-      .eq('is_deleted', false)   // ← กรองรายการที่ถูก Soft Delete ออก
-      .order('indicator_name', { ascending: true }),
-    'Health KPI page query'
-  );
+      .eq('is_deleted', false)
+      .order('indicator_name', { ascending: true });
+
+  if (year && year !== 'All') query = query.eq('fiscal_year', year);
+  if (period && period !== 'All') query = query.eq('period', period);
+
+  const { data, error } = await withSupabaseTimeout(query, 'Health KPI page query');
     
   if (error) throw error;
   return data;
@@ -85,11 +88,19 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function DashboardHealth() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const fiscalYear = searchParams.get('year') || 'All';
+  const urlPeriod = searchParams.get('period') || 'All';
+
+  const setGlobalFilter = (y, p) => {
+    setSearchParams({ year: y, period: p });
+  };
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['healthData'],
-    queryFn: fetchHealthData,
-    refetchOnWindowFocus: true,  // ← refresh เมื่อ user กลับมาที่ tab
-    staleTime: 0,                // ← ไม่ cache — ดึงใหม่ทันทีเมื่อ invalidate
+    queryKey: ['healthData', fiscalYear, urlPeriod],
+    queryFn: () => fetchHealthData(fiscalYear, urlPeriod),
+    refetchOnWindowFocus: true,
+    staleTime: 0,
     retry: 0,
   });
 
@@ -474,8 +485,29 @@ export default function DashboardHealth() {
            {selectedSub !== 'ALL' && <p className="text-cyan-600 font-bold ml-14">(เจาะจงเฉพาะ: {selectedSub})</p>}
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 relative z-10 w-full xl:w-auto shrink-0 items-center">
+        <div className="flex flex-col md:flex-row gap-4 relative z-10 w-full xl:w-auto shrink-0 items-end">
            <div className="space-y-1">
+              <label className="text-slate-900 text-[13px] uppercase tracking-wider font-black ml-1">ปีงบประมาณ</label>
+              <select value={fiscalYear} onChange={(e) => setGlobalFilter(e.target.value, urlPeriod)} className="bg-white border border-slate-200 text-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm cursor-pointer h-[42px]">
+                <option value="All">ทุกปีงบประมาณ</option>
+                {['2567', '2568', '2569', '2570'].map(y => <option key={y} value={y}>ปี {y}</option>)}
+              </select>
+           </div>
+           <div className="space-y-1">
+              <label className="text-slate-900 text-[13px] uppercase tracking-wider font-black ml-1">ไตรมาส</label>
+              <select value={urlPeriod} onChange={(e) => setGlobalFilter(fiscalYear, e.target.value)} className="bg-white border border-slate-200 text-slate-700 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm cursor-pointer h-[42px]">
+                <option value="All">ทุกไตรมาส</option>
+                <option value="Q1">Q1</option>
+                <option value="Q2">Q2</option>
+                <option value="Q3">Q3</option>
+                <option value="Q4">Q4</option>
+                <option value="Year-End">Year-End</option>
+              </select>
+           </div>
+           
+           <div className="hidden xl:block w-px h-10 bg-slate-200 mx-2 self-center" />
+
+           <div className="space-y-1 w-full xl:w-[350px]">
               <label className="text-emerald-700 text-[15px] uppercase tracking-wider font-bold ml-1">เลือกตัวชี้วัดหลัก</label>
               <select 
                  value={selectedMain} 
@@ -951,3 +983,7 @@ export default function DashboardHealth() {
     </div>
   );
 }
+
+
+
+

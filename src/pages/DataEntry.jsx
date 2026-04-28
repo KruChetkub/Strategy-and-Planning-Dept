@@ -16,7 +16,8 @@ export default function DataEntry() {
     unit: '',                 // หน่วยวัด
     currentPerformance: '',   // ผลการดำเนินงานปัจจุบัน (68)
     agency: '',               // หน่วยงานที่รับผิดชอบ
-    year: '2568',             // ปีที่รายงาน (Default is current year)
+    fiscalYear: '2569',       // ปีงบประมาณ
+    period: 'Q4',             // ไตรมาส / รอบประเมิน
     note: ''                  // หมายเหตุ
   });
 
@@ -36,7 +37,9 @@ export default function DataEntry() {
           category: formData.subTarget,
           target_2030: formData.target2030,
           current_performance: parseFloat(formData.currentPerformance) || 0,
-          description: formData.note
+          description: formData.note,
+          fiscal_year: formData.fiscalYear,
+          period: formData.period
         }]);
 
       if (insertError) throw insertError;
@@ -113,8 +116,21 @@ export default function DataEntry() {
           </div>
 
           <div className="space-y-2">
-            <label className={labelClass}>ปีที่รายงาน (พ.ศ.)</label>
-            <input type="text" name="year" required value={formData.year} onChange={handleChange} placeholder="เช่น 2568" className={inputClass}/>
+            <label className={labelClass}>ปีงบประมาณ</label>
+            <select name="fiscalYear" required value={formData.fiscalYear} onChange={handleChange} className={inputClass}>
+              {['2567', '2568', '2569', '2570'].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className={labelClass}>ไตรมาส / รอบประเมิน</label>
+            <select name="period" required value={formData.period} onChange={handleChange} className={inputClass}>
+              <option value="Q1">ไตรมาส 1 (ต.ค. - ธ.ค.)</option>
+              <option value="Q2">ไตรมาส 2 (ม.ค. - มี.ค.)</option>
+              <option value="Q3">ไตรมาส 3 (เม.ย. - มิ.ย.)</option>
+              <option value="Q4">ไตรมาส 4 (ก.ค. - ก.ย.)</option>
+              <option value="Year-End">ภาพรวมทั้งปี (Year-End)</option>
+            </select>
           </div>
 
 

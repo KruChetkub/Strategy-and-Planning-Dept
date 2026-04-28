@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Activity, Target, CheckCircle, AlertTriangle, MoreHorizontal } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -6,14 +7,16 @@ import { supabase, withSupabaseTimeout } from '../lib/supabase';
 
 
 
-const fetchAllData = async () => {
-  const { data, error } = await withSupabaseTimeout(
-    supabase
+const fetchAllData = async (year, period) => {
+  let query = supabase
       .from('sdg_indicators')
       .select('*')
-      .order('indicator_name', { ascending: true }),
-    'SDG page query'
-  );
+      .order('indicator_name', { ascending: true });
+
+  if (year && year !== 'All') query = query.eq('fiscal_year', year);
+  if (period && period !== 'All') query = query.eq('period', period);
+
+  const { data, error } = await withSupabaseTimeout(query, 'SDG page query');
     
   if (error) throw error;
   return data;
@@ -106,9 +109,19 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Dashboard({ categoryFilter }) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const fiscalYear = searchParams.get('year') || 'All';
+  const urlPeriod = searchParams.get('period') || 'All';
+
+  const setGlobalFilter = (y, p) => {
+    setSearchParams({ year: y, period: p });
+  };
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['google_sheets_data'],
-    queryFn: fetchAllData,
+    queryKey: ['sdgData', fiscalYear, urlPeriod],
+    queryFn: () => fetchAllData(fiscalYear, urlPeriod),
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
     retry: 0,
   });
 
@@ -226,7 +239,7 @@ export default function Dashboard({ categoryFilter }) {
   if (dashboardData.length === 0) {
     return (
       <div className="space-y-8 max-w-7xl mx-auto pb-12">
-        <div className="flex items-center justify-between mb-8 px-2">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 px-2 gap-4">
           <div>
             <h1 className="text-4xl font-black text-slate-800 tracking-tight">
               {categoryFilter ? `แดชบอร์ด ${categoryFilter}` : 'ภาพรวมตัวชี้วัดสำคัญ (รวมทั้งหมด)'}
@@ -234,6 +247,26 @@ export default function Dashboard({ categoryFilter }) {
             <p className="text-sky-700 font-semibold text-base mt-2 flex items-center gap-2">
               <Activity size={14} className="animate-pulse" /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
             </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="space-y-1">
+                <label className="text-slate-900 text-[13px] uppercase tracking-wider font-black ml-1">ปีงบประมาณ</label>
+                <select value={fiscalYear} onChange={(e) => setGlobalFilter(e.target.value, urlPeriod)} className="bg-white border border-slate-200 text-slate-700 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-sky-500 shadow-sm cursor-pointer">
+                  <option value="All">ทุกปีงบประมาณ</option>
+                  {['2567', '2568', '2569', '2570'].map(y => <option key={y} value={y}>ปี {y}</option>)}
+                </select>
+            </div>
+            <div className="space-y-1">
+                <label className="text-slate-900 text-[13px] uppercase tracking-wider font-black ml-1">ไตรมาส</label>
+                <select value={urlPeriod} onChange={(e) => setGlobalFilter(fiscalYear, e.target.value)} className="bg-white border border-slate-200 text-slate-700 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-sky-500 shadow-sm cursor-pointer">
+                  <option value="All">ทุกไตรมาส</option>
+                  <option value="Q1">Q1</option>
+                  <option value="Q2">Q2</option>
+                  <option value="Q3">Q3</option>
+                  <option value="Q4">Q4</option>
+                  <option value="Year-End">Year-End</option>
+                </select>
+            </div>
           </div>
         </div>
         
@@ -253,7 +286,7 @@ export default function Dashboard({ categoryFilter }) {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12 fade-in-up">
-      <div className="flex items-center justify-between mb-8 px-2">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 px-2 gap-4">
         <div>
           <h1 className="text-[2.75rem] font-black text-slate-950 tracking-tight">
             {categoryFilter ? `แดชบอร์ด ${categoryFilter}` : 'ภาพรวมตัวชี้วัดสำคัญ (รวมทั้งหมด)'}
@@ -262,6 +295,26 @@ export default function Dashboard({ categoryFilter }) {
             <Activity size={14} className="animate-pulse" /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
           </p>
         </div>
+        <div className="flex items-center gap-3">
+            <div className="space-y-1">
+                <label className="text-slate-900 text-[13px] uppercase tracking-wider font-black ml-1">ปีงบประมาณ</label>
+                <select value={fiscalYear} onChange={(e) => setGlobalFilter(e.target.value, urlPeriod)} className="bg-white border border-slate-200 text-slate-700 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-sky-500 shadow-sm cursor-pointer">
+                  <option value="All">ทุกปีงบประมาณ</option>
+                  {['2567', '2568', '2569', '2570'].map(y => <option key={y} value={y}>ปี {y}</option>)}
+                </select>
+            </div>
+            <div className="space-y-1">
+                <label className="text-slate-900 text-[13px] uppercase tracking-wider font-black ml-1">ไตรมาส</label>
+                <select value={urlPeriod} onChange={(e) => setGlobalFilter(fiscalYear, e.target.value)} className="bg-white border border-slate-200 text-slate-700 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-sky-500 shadow-sm cursor-pointer">
+                  <option value="All">ทุกไตรมาส</option>
+                  <option value="Q1">Q1</option>
+                  <option value="Q2">Q2</option>
+                  <option value="Q3">Q3</option>
+                  <option value="Q4">Q4</option>
+                  <option value="Year-End">Year-End</option>
+                </select>
+            </div>
+          </div>
       </div>
 
       {/* TOP OVERVIEW ROW (Redesigned for Professional Clarity) */}
@@ -481,3 +534,7 @@ export default function Dashboard({ categoryFilter }) {
     </div>
   );
 }
+
+
+
+

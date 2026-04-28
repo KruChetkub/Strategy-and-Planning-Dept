@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Loader2, Search, Layers, Activity, CheckCircle2, AlertTriangle,
@@ -100,14 +100,23 @@ function StatCard({ count, label, Icon, bgClass, textClass, borderClass }) {
 export default function KPIGroup() {
   const { groupId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const fiscalYear = searchParams.get('year') || 'All';
+  const urlPeriod = searchParams.get('period') || 'All';
+
+  const setGlobalFilter = (y, p) => {
+    setSearchParams({ year: y, period: p });
+  };
+
   const config = GROUP_CONFIG[groupId] || GROUP_CONFIG.sdg;
   const GroupIcon = config.Icon;
 
   /* ── Fetch ── */
-  const { data: rawData, isLoading, error } = useQuery({
-    queryKey: ['kpiGroup', groupId],
-    queryFn: config.fetchFn,
-    staleTime: 5 * 60 * 1000,
+  const { data: rawData = [], isLoading, error } = useQuery({
+    queryKey: ['kpiGroup', groupId, fiscalYear, urlPeriod],
+    queryFn: () => config.fetchFn(fiscalYear, urlPeriod),
+    enabled: !!config,
+    staleTime: 0,
   });
 
   /* ── UI State ── */
@@ -420,3 +429,5 @@ export default function KPIGroup() {
     </div>
   );
 }
+
+

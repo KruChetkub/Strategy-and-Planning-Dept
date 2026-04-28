@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Loader2, Activity, Target, CheckCircle2, AlertOctagon,
@@ -11,10 +11,22 @@ import { supabase, withSupabaseTimeout } from '../lib/supabase';
 /* ─────────────────────────────────────────────────────────────────────────────
    DATA FETCHING & HELPERS — ไม่มีการแก้ไข logic ใดๆ ทั้งสิ้น
 ───────────────────────────────────────────────────────────────────────────── */
-const fetchAllDashboards = async () => {
+const fetchAllDashboards = async (year, period) => {
+  let sdgQuery = supabase.from('sdg_indicators').select('*').eq('is_deleted', false);
+  let healthQuery = supabase.from('health_indicators').select('*').eq('is_deleted', false);
+
+  if (year && year !== 'All') {
+    sdgQuery = sdgQuery.eq('fiscal_year', year);
+    healthQuery = healthQuery.eq('fiscal_year', year);
+  }
+  if (period && period !== 'All') {
+    sdgQuery = sdgQuery.eq('period', period);
+    healthQuery = healthQuery.eq('period', period);
+  }
+
   const [resSdgs, resHealth] = await Promise.all([
-    withSupabaseTimeout(supabase.from('sdg_indicators').select('*'), 'SDG dashboard query'),
-    withSupabaseTimeout(supabase.from('health_indicators').select('*'), 'Health dashboard query')
+    withSupabaseTimeout(sdgQuery, 'SDG dashboard query'),
+    withSupabaseTimeout(healthQuery, 'Health dashboard query')
   ]);
   if (resSdgs.error) throw resSdgs.error;
   if (resHealth.error) throw resHealth.error;
@@ -99,9 +111,17 @@ function DonutRing({ percent, color = '#10b981', size = 120, stroke = 11 }) {
    MAIN COMPONENT
 ═════════════════════════════════════════════════════════════════════════════ */
 export default function DashboardOverview() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const fiscalYear = searchParams.get('year') || 'All';
+  const period = searchParams.get('period') || 'All';
+
+  const setGlobalFilter = (y, p) => {
+    setSearchParams({ year: y, period: p });
+  };
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['overviewData'],
-    queryFn: fetchAllDashboards,
+    queryKey: ['overviewData', fiscalYear, period],
+    queryFn: () => fetchAllDashboards(fiscalYear, period),
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000,
     retry: 0,
@@ -248,9 +268,26 @@ export default function DashboardOverview() {
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
           {/* Left: Main Metric */}
           <div>
-            <p className="text-white font-bold uppercase tracking-[0.3em] text-sm mb-2 flex items-center gap-2">
-              <Target size={12} /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค — ปี 2569
-            </p>
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <p className="text-white font-bold uppercase tracking-widest text-xs md:text-sm flex items-center gap-2">
+                <Target size={12} /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
+              </p>
+              <div className="hidden md:block h-4 w-px bg-white/20"></div>
+              <div className="flex items-center gap-2">
+                <select value={fiscalYear} onChange={(e) => setGlobalFilter(e.target.value, period)} className="bg-white/10 hover:bg-white/20 transition-colors border border-white/20 text-white rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-white/50 appearance-none cursor-pointer">
+                  <option value="All" className="text-slate-800">ทุกปีงบประมาณ</option>
+                  {['2567', '2568', '2569', '2570'].map(y => <option key={y} value={y} className="text-slate-800">ปี {y}</option>)}
+                </select>
+                <select value={period} onChange={(e) => setGlobalFilter(fiscalYear, e.target.value)} className="bg-white/10 hover:bg-white/20 transition-colors border border-white/20 text-white rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-white/50 appearance-none cursor-pointer">
+                  <option value="All" className="text-slate-800">ทุกไตรมาส</option>
+                  <option value="Q1" className="text-slate-800">Q1</option>
+                  <option value="Q2" className="text-slate-800">Q2</option>
+                  <option value="Q3" className="text-slate-800">Q3</option>
+                  <option value="Q4" className="text-slate-800">Q4</option>
+                  <option value="Year-End" className="text-slate-800">Year-End</option>
+                </select>
+              </div>
+            </div>
             <div className="flex items-end gap-4 mb-3">
               <span className="text-[5.25rem] md:text-[6rem] font-black tracking-tighter tabular-nums leading-none">{passedPct}</span>
               <div className="pb-2">
@@ -580,3 +617,4 @@ export default function DashboardOverview() {
     </div>
   );
 }
+
