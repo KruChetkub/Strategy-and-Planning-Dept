@@ -4,8 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Loader2, Activity, Target, CheckCircle2, AlertOctagon,
   TrendingUp, XCircle, ArrowRight, AlertTriangle, ShieldCheck,
-  BarChart2, Layers
+  BarChart2, Layers, Users
 } from 'lucide-react';
+import { useVisitorCount } from '../hooks/useVisitorCount';
 import { supabase, withSupabaseTimeout } from '../lib/supabase';
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -607,14 +608,38 @@ export default function DashboardOverview() {
           </table>
         </div>
 
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-100">
-          <p className="text-xs font-black text-slate-950 uppercase tracking-[0.3em] text-center">
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4 rounded-b-3xl">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center md:text-left">
             © 2026 KPI Monitoring System — กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
           </p>
+          <VisitorBadge />
         </div>
       </div>
-
     </div>
   );
 }
 
+function VisitorBadge() {
+  const { totalVisitors, todayVisitors, isLoading } = useVisitorCount();
+  if (isLoading) return null;
+  return (
+    <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm transition-all hover:shadow-md hover:border-violet-200 group cursor-default">
+      <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-50 transition-colors">
+        <Users size={14} className="text-slate-400 group-hover:text-violet-600 transition-colors" />
+      </div>
+      <div className="leading-tight text-left">
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-violet-500 transition-colors">
+          ดูสถิติเว็บไซต์
+        </p>
+        <div className="flex items-baseline gap-2 mt-0.5">
+          <span className="text-base font-black text-slate-800 tabular-nums">
+            {totalVisitors?.toLocaleString() ?? '—'}
+          </span>
+          <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-md whitespace-nowrap group-hover:bg-violet-50 group-hover:text-violet-600 group-hover:border-violet-100 transition-colors">
+            วันนี้ {todayVisitors ?? 0}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}

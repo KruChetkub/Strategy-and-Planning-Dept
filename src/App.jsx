@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import DashboardHealth from './pages/DashboardHealth';
@@ -17,6 +18,7 @@ const Settings = () => <div className="p-4 bg-white rounded-lg shadow-sm"><h2 cl
 
 function App() {
   return (
+    <>
     <Routes>
       <Route path="/" element={<Layout />}>
         <Route index element={<DashboardOverview />} />
@@ -35,6 +37,8 @@ function App() {
         </Route>
       </Route>
     </Routes>
+    <Analytics />
+    </>
   );
 }
 
