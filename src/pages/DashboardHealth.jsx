@@ -193,6 +193,10 @@ export default function DashboardHealth() {
       const matchMain = d.title === selectedMain;
       const matchSub = selectedSub === 'ALL' ? true : d.subtitle === selectedSub;
       return matchMain && matchSub;
+    }).sort((a, b) => {
+      const numA = parseInt((a.region || '').replace(/\D/g, '')) || 0;
+      const numB = parseInt((b.region || '').replace(/\D/g, '')) || 0;
+      return numA - numB;
     });
   }, [rawMappedData, selectedMain, selectedSub]);
 
