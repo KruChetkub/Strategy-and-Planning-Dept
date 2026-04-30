@@ -828,7 +828,10 @@ export default function DashboardOverview() {
                   ตัวชี้วัดภายใต้แผนการขับเคลื่อนการพัฒนาที่ยั่งยืน
                 </h3>
                 <h3 className="text-[1.1rem] font-black text-slate-950">
-                  SDGs เป้าหมายที่ 3 ในส่วนที่เกี่ยวข้องกับกรมควบคุมโรค
+                  SDGs เป้าหมายที่ 3 ในส่วนที่เกี่ยวข้อง
+                </h3>
+                <h3 className="text-[1.1rem] font-black text-slate-950">
+                  กับกรมควบคุมโรค
                 </h3>
                 <p className="text-sm text-slate-950 font-medium">
                   Sustainable Development Goals
