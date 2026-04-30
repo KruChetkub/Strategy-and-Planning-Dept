@@ -718,7 +718,7 @@ export default function DashboardOverview() {
       ════════════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-1 gap-6">
         {/* Urgent Action Panel (Full width) */}
-        <div className="bg-white rounded-3xl border border-rose-100 shadow-md overflow-hidden">
+        <div className="bg-white rounded-3xl border border-rose-500 shadow-md overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-rose-50 bg-rose-50/50">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center">
@@ -825,7 +825,10 @@ export default function DashboardOverview() {
               </div>
               <div>
                 <h3 className="text-[1.1rem] font-black text-slate-950">
-                  เป้าหมายสากล SDGs
+                  ตัวชี้วัดภายใต้แผนการขับเคลื่อนการพัฒนาที่ยั่งยืน
+                </h3>
+                <h3 className="text-[1.1rem] font-black text-slate-950">
+                  SDGs เป้าหมายที่ 3
                 </h3>
                 <p className="text-sm text-slate-950 font-medium">
                   Sustainable Development Goals
@@ -913,11 +916,13 @@ export default function DashboardOverview() {
               </div>
               <div>
                 <h3 className="text-[1.1rem] font-black text-slate-950">
-                  ตัวชี้วัดสาธารณสุข
+                  ตัวชี้วัดกระทรวงสาธารณสุขในส่วนที่เกี่ยวข้องกับ
                 </h3>
-                <p className="text-sm text-slate-950 font-medium">
-                  Health KPI — ระดับกระทรวง
-                </p>
+                <h3 className="text-[1.1rem] font-black text-slate-950">
+                  กรมควบคุมโรค
+                </h3>
+
+                <p className="text-sm text-slate-950 font-medium">Health KPI</p>
               </div>
             </div>
             <button
