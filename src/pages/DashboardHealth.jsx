@@ -279,7 +279,11 @@ export default function DashboardHealth() {
   useEffect(() => {
     if (indicatorParam && uniqueMainIndicators.includes(indicatorParam)) {
       setSelectedMain(indicatorParam);
-    } else if (indicatorParam && !selectedMain && uniqueMainIndicators.length > 0) {
+    } else if (
+      indicatorParam &&
+      !selectedMain &&
+      uniqueMainIndicators.length > 0
+    ) {
       // If indicatorParam is present but maybe not loaded yet, wait for uniqueMainIndicators
       if (uniqueMainIndicators.includes(indicatorParam)) {
         setSelectedMain(indicatorParam);
@@ -712,7 +716,7 @@ export default function DashboardHealth() {
               <Activity className="text-emerald-600" size={20} />
             </div>
             {selectedMain || (
-              <span className="text-slate-400">
+              <span className="text-slate-500">
                 Health KPI ในส่วนที่เกี่ยวข้องกับกรมควบคุมโรค
               </span>
             )}

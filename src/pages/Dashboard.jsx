@@ -567,7 +567,7 @@ export default function Dashboard({ categoryFilter }) {
             </svg>
 
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-[4.1rem] font-black text-slate-950 tracking-tighter">
+              <span className="text-[4.1rem] font-black text-slate-950 tracking-wider">
                 {Math.round((passed / dashboardData.length) * 100) || 0}%
               </span>
               <span className="text-sm font-extrabold text-sky-700 uppercase tracking-[0.2em] mt-2">

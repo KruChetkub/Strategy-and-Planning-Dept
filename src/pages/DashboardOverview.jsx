@@ -579,57 +579,60 @@ export default function DashboardOverview() {
         <div className="absolute -right-16 -top-16 w-72 h-72 bg-white/5 rounded-full blur-2xl" />
         <div className="absolute -left-8 -bottom-8 w-48 h-48 bg-white/5 rounded-full blur-2xl" />
 
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
-          {/* Left: Main Metric */}
-          <div>
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <p className="text-white font-bold uppercase tracking-widest text-xs md:text-sm flex items-center gap-2">
-                <Target size={12} /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
-              </p>
-              <div className="hidden md:block h-4 w-px bg-white/20"></div>
-              <div className="flex items-center gap-2">
-                <select
-                  value={fiscalYear}
-                  onChange={(e) => setGlobalFilter(e.target.value, period)}
-                  className="bg-white/10 hover:bg-white/20 transition-colors border border-white/20 text-white rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-white/50 appearance-none cursor-pointer"
-                >
-                  <option value="All" className="text-slate-800">
-                    ทุกปีงบประมาณ
+        <div className="relative z-10 flex flex-col gap-6 w-full">
+          {/* Top Row: Title & Filters */}
+          <div className="flex flex-wrap items-center gap-4">
+            <p className="text-white font-black uppercase tracking-widest text-2xl md:text-3xl flex items-center gap-3">
+              <Target size={32} /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
+            </p>
+            <div className="hidden md:block h-5 w-px bg-white/20"></div>
+            <div className="flex items-center gap-2">
+              <select
+                value={fiscalYear}
+                onChange={(e) => setGlobalFilter(e.target.value, period)}
+                className="bg-white/10 hover:bg-white/20 transition-colors border border-white/20 text-white rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-white/50 appearance-none cursor-pointer"
+              >
+                <option value="All" className="text-slate-800">
+                  ทุกปีงบประมาณ
+                </option>
+                {["2567", "2568", "2569", "2570"].map((y) => (
+                  <option key={y} value={y} className="text-slate-800">
+                    ปี {y}
                   </option>
-                  {["2567", "2568", "2569", "2570"].map((y) => (
-                    <option key={y} value={y} className="text-slate-800">
-                      ปี {y}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={period}
-                  onChange={(e) => setGlobalFilter(fiscalYear, e.target.value)}
-                  className="bg-white/10 hover:bg-white/20 transition-colors border border-white/20 text-white rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-white/50 appearance-none cursor-pointer"
-                >
-                  <option value="All" className="text-slate-800">
-                    ทุกไตรมาส
-                  </option>
-                  <option value="Q1" className="text-slate-800">
-                    Q1
-                  </option>
-                  <option value="Q2" className="text-slate-800">
-                    Q2
-                  </option>
-                  <option value="Q3" className="text-slate-800">
-                    Q3
-                  </option>
-                  <option value="Q4" className="text-slate-800">
-                    Q4
-                  </option>
-                  <option value="Year-End" className="text-slate-800">
-                    Year-End
-                  </option>
-                </select>
-              </div>
+                ))}
+              </select>
+              <select
+                value={period}
+                onChange={(e) => setGlobalFilter(fiscalYear, e.target.value)}
+                className="bg-white/10 hover:bg-white/20 transition-colors border border-white/20 text-white rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-white/50 appearance-none cursor-pointer"
+              >
+                <option value="All" className="text-slate-800">
+                  ทุกไตรมาส
+                </option>
+                <option value="Q1" className="text-slate-800">
+                  Q1
+                </option>
+                <option value="Q2" className="text-slate-800">
+                  Q2
+                </option>
+                <option value="Q3" className="text-slate-800">
+                  Q3
+                </option>
+                <option value="Q4" className="text-slate-800">
+                  Q4
+                </option>
+                <option value="Year-End" className="text-slate-800">
+                  Year-End
+                </option>
+              </select>
             </div>
-            <div className="flex items-end gap-4 mb-3">
-              <span className="text-[5.25rem] md:text-[6rem] font-black tracking-tighter tabular-nums leading-none">
+          </div>
+
+          {/* Bottom Row: Metrics & Pills */}
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8 w-full">
+            {/* Left: Big Number */}
+            <div className="flex items-end gap-4 min-w-max">
+              <span className="text-[5.25rem] md:text-[6rem] font-black tracking-wider tabular-nums leading-none">
                 {passedPct}
               </span>
               <div className="pb-2">
@@ -639,61 +642,71 @@ export default function DashboardOverview() {
                 </p>
               </div>
             </div>
-            <p className="text-white text-base font-medium">
-              บรรลุเป้าหมาย{" "}
-              <span className="text-white font-black">{stats.totalPassed}</span>{" "}
-              จาก{" "}
-              <span className="text-white font-black">{stats.totalKPIs}</span>{" "}
-              ตัวชี้วัดทั้งหมด
-            </p>
-          </div>
 
-          {/* Right: Status Pill Summary */}
-          <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-2.5 bg-emerald-500/20 border border-emerald-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
-              <CheckCircle2 size={18} className="text-emerald-400" />
-              <div>
-                <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">
-                  {stats.totalPassed}
-                </p>
-                <p className="text-white text-xs font-bold uppercase tracking-wider">
-                  บรรลุเป้าหมาย
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2.5 bg-amber-500/20 border border-amber-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
-              <AlertTriangle size={18} className="text-amber-400" />
-              <div>
-                <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">
-                  {stats.totalWarning}
-                </p>
-                <p className="text-white text-xs font-bold uppercase tracking-wider">
-                  เฝ้าระวัง
+            {/* Middle: Target Text */}
+            <div className="flex-1 flex justify-center text-center">
+              <div className="bg-white/5 border border-white/10 px-6 py-3 rounded-2xl backdrop-blur-sm">
+                <p className="text-white text-base md:text-lg font-medium tracking-wide">
+                  บรรลุเป้าหมาย{" "}
+                  <span className="text-white font-black text-lg">
+                    {stats.totalPassed}
+                  </span>{" "}
+                  จาก{" "}
+                  <span className="text-white font-black text-lg">
+                    {stats.totalKPIs}
+                  </span>{" "}
+                  ตัวชี้วัดทั้งหมด
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2.5 bg-orange-500/20 border border-orange-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
-              <AlertOctagon size={18} className="text-orange-400" />
-              <div>
-                <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">
-                  {stats.totalAtRisk}
-                </p>
-                <p className="text-white text-xs font-bold uppercase tracking-wider">
-                  ระดับเสี่ยง
-                </p>
+
+            {/* Right: Status Pill Summary */}
+            <div className="flex flex-wrap justify-end gap-3 min-w-max">
+              <div className="flex items-center gap-2.5 bg-emerald-500/20 border border-emerald-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
+                <CheckCircle2 size={18} className="text-emerald-400" />
+                <div>
+                  <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">
+                    {stats.totalPassed}
+                  </p>
+                  <p className="text-white text-xs font-bold uppercase tracking-wider">
+                    บรรลุเป้าหมาย
+                  </p>
+                </div>
               </div>
-            </div>
-            <div
-              className={`flex items-center gap-2.5 border backdrop-blur-sm px-5 py-3 rounded-2xl ${stats.totalCritical > 0 ? "bg-rose-500/30 border-rose-400/50 pulse-ring-rose" : "bg-rose-500/10 border-rose-400/20"}`}
-            >
-              <XCircle size={18} className="text-rose-400" />
-              <div>
-                <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">
-                  {stats.totalCritical}
-                </p>
-                <p className="text-white text-xs font-bold uppercase tracking-wider">
-                  ขั้นวิกฤติ
-                </p>
+              <div className="flex items-center gap-2.5 bg-amber-500/20 border border-amber-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
+                <AlertTriangle size={18} className="text-amber-400" />
+                <div>
+                  <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">
+                    {stats.totalWarning}
+                  </p>
+                  <p className="text-white text-xs font-bold uppercase tracking-wider">
+                    เฝ้าระวัง
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 bg-orange-500/20 border border-orange-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
+                <AlertOctagon size={18} className="text-orange-400" />
+                <div>
+                  <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">
+                    {stats.totalAtRisk}
+                  </p>
+                  <p className="text-white text-xs font-bold uppercase tracking-wider">
+                    ระดับเสี่ยง
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`flex items-center gap-2.5 border backdrop-blur-sm px-5 py-3 rounded-2xl ${stats.totalCritical > 0 ? "bg-rose-500/30 border-rose-400/50 pulse-ring-rose" : "bg-rose-500/10 border-rose-400/20"}`}
+              >
+                <XCircle size={18} className="text-rose-400" />
+                <div>
+                  <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">
+                    {stats.totalCritical}
+                  </p>
+                  <p className="text-white text-xs font-bold uppercase tracking-wider">
+                    ขั้นวิกฤติ
+                  </p>
+                </div>
               </div>
             </div>
           </div>
