@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Loader2, Target, CheckCircle2, XCircle, Save } from 'lucide-react';
+import { Activity, Loader2, Target, CheckCircle2, XCircle, Save, Link2, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function DataEntryHealth() {
@@ -20,7 +20,8 @@ export default function DataEntryHealth() {
     targetQ3: '>= 60.00',    // เป้าหมาย Q3
     targetQ4: '>= 70.00',    // เป้าหมาย Q4
     fiscalYear: '2569',      // ปีงบประมาณ
-    period: 'Q4'             // ไตรมาส
+    period: 'Q4',            // ไตรมาส
+    referenceUrl: '',        // ลิ้งอ้างอิง (ต่อ 1 ลิ้งต่อตัวชี้วัด)
   });
 
   const handleChange = (e) => {
@@ -36,7 +37,7 @@ export default function DataEntryHealth() {
         .from('health_indicators')
         .insert([{
           indicator_name: formData.indicatorName,
-          kpi_group: formData.subIndicatorName, // Mapping subIndicatorName to kpi_group for categorization
+          kpi_group: formData.subIndicatorName,
           region: formData.region,
           a_value: parseFloat(formData.A) || 0,
           b_value: parseFloat(formData.B) || 0,
@@ -46,7 +47,8 @@ export default function DataEntryHealth() {
           target_q3: formData.targetQ3,
           target_q4: formData.targetQ4,
           fiscal_year: formData.fiscalYear,
-          period: formData.period
+          period: formData.period,
+          reference_url: formData.referenceUrl?.trim() || null,
         }]);
 
       if (insertError) throw insertError;
@@ -57,13 +59,13 @@ export default function DataEntryHealth() {
         // ล้างทุกอย่าง เริ่มตัวชี้วัดใหม่หมดเลย
         setFormData({
           indicatorName: '', subIndicatorName: '', region: '',
-          A: '', B: '', performance: '',
+          A: '', B: '', performance: '', referenceUrl: '',
           targetQ1: '>= 50.00', targetQ2: '>= 50.00', targetQ3: '>= 60.00', targetQ4: '>= 70.00',
           fiscalYear: formData.fiscalYear,
           period: formData.period
         });
       } else {
-        // โหมด Save & Next: เก็บชื่อตัวชี้วัดและเป้าหมายไว้ แต่ล้าง "เขต" และ "ตัวเลขผลงาน" เพื่อให้ไปลุยเขตอื่นต่อ
+        // โหมด Save & Next: เก็บชื่อตัวชี้วัด, เป้าหมาย, และ referenceUrl (ลิ้งเดิมใช้ร่วมกันทุกเขตในตัวชี้วัดเดียวกัน)
         setFormData({
           ...formData, 
           region: '',
@@ -244,8 +246,46 @@ export default function DataEntryHealth() {
             <input type="number" step="0.01" name="performance" required value={formData.performance} onChange={handleChange} placeholder="ผลงานที่ทำได้" className="w-full bg-emerald-50/50 border border-emerald-300 rounded-lg px-4 py-2.5 outline-none text-slate-900 font-bold focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm"/>
             {evaluatePreview()}
           </div>
-          
-        </div>
+
+          {/* ── ลิ้งอ้างอิง ─ 1 ลิ้งต่อ 1 ตัวชี้วัด ── */}
+          <div className="lg:col-span-3 space-y-2">
+            <label className="block text-sm font-bold text-slate-700 mb-1.5 flex items-center gap-2">
+              <Link2 size={15} className="text-sky-500" />
+              ลิ้งอ้างอิง / เอกสารประกอบตัวชี้วัด (ใช้ร่วมกันทุกเขตในตัวชี้วัดเดียวกัน)
+              <span className="text-[11px] font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">ไม่บังคับ</span>
+            </label>
+            <div className="relative">
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <Link2 size={16} />
+              </div>
+              <input
+                type="url"
+                name="referenceUrl"
+                value={formData.referenceUrl}
+                onChange={handleChange}
+                placeholder="https://drive.google.com/... หรือ URL เอกสารกำกับตัวชี้วัดนี้"
+                className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 pl-10 outline-none text-slate-800 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all placeholder:text-slate-400 shadow-sm"
+              />
+            </div>
+            {formData.referenceUrl && (() => {
+              try { new URL(formData.referenceUrl); return (
+                <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-700">
+                  <CheckCircle2 size={13} />
+                  <span>URL ถูกต้อง —</span>
+                  <a href={formData.referenceUrl} target="_blank" rel="noopener noreferrer"
+                    className="underline underline-offset-2 flex items-center gap-1 hover:text-emerald-900 transition-colors">
+                    คลิกทดสอบลิ้ง <ExternalLink size={11} />
+                  </a>
+                </div>
+              );} catch { return (
+                <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-50 border border-rose-200 text-xs font-bold text-rose-600">
+                  <XCircle size={13} /> URL ไม่ถูกต้อง — กรุณาเริ่มด้วย https://
+                </div>
+              );}
+            })()}
+          </div>
+
+        </div>{/* end grid */}
 
         <div className="pt-8 border-t border-slate-200 flex flex-col sm:flex-row justify-end gap-4 relative z-10 p-2">
           <button 

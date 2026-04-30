@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity, Search, Pencil, Trash2, Save, X, Loader2,
   CheckCircle2, AlertOctagon, RotateCcw, ChevronRight,
-  ChevronsUpDown, ChevronsDownUp, Plus, MapPin
+  ChevronsUpDown, ChevronsDownUp, Plus, MapPin, Link2, ExternalLink
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -64,7 +64,7 @@ const STATUS_STYLE = {
 const fetchHealth = async (year, period) => {
   let query = supabase
     .from('health_indicators')
-    .select('id, indicator_name, kpi_group, region, a_value, b_value, performance, target_q1, target_q2, target_q3, target_q4, fiscal_year, period')
+    .select('id, indicator_name, kpi_group, region, a_value, b_value, performance, target_q1, target_q2, target_q3, target_q4, fiscal_year, period, reference_url')
     .eq('is_deleted', false)
     .order('indicator_name', { ascending: true })
     .order('kpi_group',      { ascending: true });
@@ -249,12 +249,15 @@ export default function ManageHealth() {
   });
 
   const [editingId,        setEditingId]        = useState(null);
-  const [addingInGroup,    setAddingInGroup]    = useState(null); // { indicator, kpiGroup }
+  const [addingInGroup,    setAddingInGroup]    = useState(null);
   const [isSaving,         setIsSaving]         = useState(false);
   const [search,           setSearch]           = useState('');
   const [toasts,           setToasts]           = useState([]);
   const [collapsedMaster,  setCollapsedMaster]  = useState(new Set());
   const [collapsedSub,     setCollapsedSub]     = useState(new Set());
+  const [editingLinkFor,   setEditingLinkFor]   = useState(null);  // indicator_name
+  const [linkInput,        setLinkInput]        = useState('');    // URL input value
+  const [isSavingLink,     setIsSavingLink]     = useState(false);
   const pendingDeletes = useRef({});
 
   /* ── Toast ── */
@@ -379,6 +382,35 @@ export default function ManageHealth() {
     addToast('ยกเลิกการลบเรียบร้อยแล้ว ✓');
   };
 
+  /* ── SAVE REFERENCE LINK (per indicator_name ─ update all matching rows) ── */
+  const handleSaveLink = async (indName) => {
+    setIsSavingLink(true);
+    try {
+      const url = linkInput.trim() || null;
+      if (url) {
+        try { new URL(url); } catch {
+          addToast('รูปแบบ URL ไม่ถูกต้อง — กรุณาเริ่มด้วย https://', 'error');
+          setIsSavingLink(false);
+          return;
+        }
+      }
+      const { error } = await supabase
+        .from('health_indicators')
+        .update({ reference_url: url })
+        .eq('indicator_name', indName)
+        .eq('is_deleted', false);
+      if (error) throw error;
+      addToast(url ? 'บันทึกลิ้งอ้างอิงเรียบร้อยแล้ว ✓' : 'ลบลิ้งอ้างอิงเรียบร้อยแล้ว ✓');
+      setEditingLinkFor(null);
+      queryClient.invalidateQueries({ queryKey: ['manage-health'] });
+      queryClient.invalidateQueries({ queryKey: ['healthData'] });
+    } catch (err) {
+      addToast(`เกิดข้อผิดพลาด: ${err.message}`, 'error');
+    } finally {
+      setIsSavingLink(false);
+    }
+  };
+
   /* ── Loading / Error ── */
   if (isLoading) return (
     <div className="max-w-7xl mx-auto space-y-4 pb-12 animate-pulse">
@@ -499,6 +531,69 @@ export default function ManageHealth() {
                   isOpen={isMasterOpen}
                   onToggle={() => toggleMaster(indName)}
                 />
+
+                {/* ── LINK BAR ── */}
+                {(() => {
+                  const existingLink = allRows.find(r => r.reference_url)?.reference_url || null;
+                  const isEditingThis = editingLinkFor === indName;
+                  return (
+                    <div className={`flex items-center gap-3 px-5 py-2 border-b border-slate-100 text-xs
+                      ${isEditingThis ? 'bg-sky-50' : 'bg-slate-50/70 hover:bg-slate-100/60'} transition-colors`}>
+                      <Link2 size={13} className={existingLink ? 'text-sky-500' : 'text-slate-300'} />
+
+                      {isEditingThis ? (
+                        /* ─ Edit mode ─ */
+                        <>
+                          <input
+                            type="url"
+                            autoFocus
+                            value={linkInput}
+                            onChange={e => setLinkInput(e.target.value)}
+                            placeholder="https://drive.google.com/... หรือ URL เอกสารอ้างอิง"
+                            className="flex-1 bg-white border border-sky-300 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-sky-400/30 text-slate-800 placeholder:text-slate-400"
+                          />
+                          <button
+                            onClick={() => handleSaveLink(indName)}
+                            disabled={isSavingLink}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-black text-white bg-sky-500 hover:bg-sky-600 transition-colors disabled:opacity-50"
+                          >
+                            {isSavingLink ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
+                            บันทึกลิ้ง
+                          </button>
+                          <button
+                            onClick={() => setEditingLinkFor(null)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-black text-slate-500 bg-white border border-slate-200 hover:bg-slate-100 transition-colors"
+                          >
+                            <X size={11} /> ยกเลิก
+                          </button>
+                        </>
+                      ) : existingLink ? (
+                        /* ─ Has link ─ */
+                        <>
+                          <a href={existingLink} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-sky-600 font-bold hover:underline truncate max-w-xs">
+                            <ExternalLink size={11} className="shrink-0" />
+                            <span className="truncate">{existingLink}</span>
+                          </a>
+                          <button
+                            onClick={() => { setEditingLinkFor(indName); setLinkInput(existingLink); }}
+                            className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black text-sky-600 bg-sky-50 hover:bg-sky-100 border border-sky-200 transition-colors whitespace-nowrap"
+                          >
+                            <Pencil size={10} /> แก้ไขลิ้ง
+                          </button>
+                        </>
+                      ) : (
+                        /* ─ No link ─ */
+                        <button
+                          onClick={() => { setEditingLinkFor(indName); setLinkInput(''); }}
+                          className="flex items-center gap-1 text-[11px] font-bold text-slate-800 hover:text-sky-600 transition-colors"
+                        >
+                          <Plus size={11} /> เพิ่มลิ้งอ้างอิง / เอกสารประกอบตัวชี้วัด
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {isMasterOpen && (
                   <div>

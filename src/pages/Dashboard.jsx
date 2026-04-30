@@ -152,6 +152,7 @@ export default function Dashboard({ categoryFilter }) {
         agency: agency,
         year: year,
         note: note,
+        reference_url: row.reference_url || null,
         status_info: status,
         progress: Math.min(100, Math.max(0, Math.round(status.percentage || 0)))
       };
@@ -452,6 +453,7 @@ export default function Dashboard({ categoryFilter }) {
                   <th className="py-4 px-6 text-slate-950 font-bold text-sm uppercase tracking-wider text-right">ผลงาน</th>
                   <th className="py-4 px-6 text-slate-950 font-bold text-sm uppercase tracking-wider w-40 text-center">สถานะ</th>
                   <th className="py-4 px-6 text-slate-950 font-bold text-sm uppercase tracking-wider w-48 text-center">หน่วยงาน</th>
+                  <th className="py-4 px-6 text-slate-950 font-bold text-sm uppercase tracking-wider w-32 text-center">📎 เอกสาร</th>
                   <th className="py-4 px-6 text-slate-950 font-bold text-sm uppercase tracking-wider">หมายเหตุ</th>
                 </tr>
               </thead>
@@ -467,7 +469,7 @@ export default function Dashboard({ categoryFilter }) {
                   <React.Fragment key={groupIndex}>
                     {/* Header Row for the Group */}
                     <tr className="bg-sky-50 border-b border-sky-100">
-                      <td colSpan="6" className="p-0">
+                      <td colSpan="7" className="p-0">
                         <div className="py-3 px-6 text-base font-black text-sky-900 border-l-4 border-sky-500 shadow-sm sticky left-0 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <span className="leading-relaxed">{groupCode}</span>
                           <span className="text-sm font-bold text-sky-800 bg-white px-3 py-1 rounded-full border border-sky-200 shadow-sm whitespace-nowrap">{kpis.length} ตัวชี้วัด</span>
@@ -515,6 +517,22 @@ export default function Dashboard({ categoryFilter }) {
 
                     <td className="py-4 px-6 align-top text-center text-xs font-medium text-slate-500">
                       {kpi.agency || '-'}
+                    </td>
+
+                    <td className="py-4 px-6 align-top text-center">
+                      {kpi.reference_url ? (
+                        <a
+                          href={kpi.reference_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-700 hover:bg-sky-100 hover:border-sky-300 hover:shadow-sm transition-all text-[11px] font-black uppercase tracking-wide whitespace-nowrap"
+                          title={kpi.reference_url}
+                        >
+                          🔗 ดูเอกสาร
+                        </a>
+                      ) : (
+                        <span className="text-slate-300 text-sm">—</span>
+                      )}
                     </td>
 
                     <td className="py-5 px-6 align-top">

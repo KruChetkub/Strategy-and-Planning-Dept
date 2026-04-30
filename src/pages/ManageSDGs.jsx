@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Database, Search, Pencil, Trash2, Save, X, Loader2,
   CheckCircle2, AlertOctagon, RotateCcw, ChevronRight,
-  ChevronsUpDown, ChevronsDownUp, Plus
+  ChevronsUpDown, ChevronsDownUp, Plus, Link2, ExternalLink
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -32,7 +32,7 @@ const extractLabel = (cat = '', code) => {
 const fetchSDGs = async (year, period) => {
   let query = supabase
     .from('sdg_indicators')
-    .select('id, category, indicator_name, target_2030, current_performance, description, fiscal_year, period')
+    .select('id, category, indicator_name, target_2030, current_performance, description, reference_url, fiscal_year, period')
     .eq('is_deleted', false)
     .order('category', { ascending: true });
 
@@ -78,16 +78,19 @@ function Toast({ toasts, onUndo }) {
    EDITABLE ROW — ใช้ทั้ง Edit และ Add New
 ───────────────────────────────────────────────────────────────────────────── */
 function EditableRow({ kpi, onSave, onCancel, isSaving, isNew = false }) {
-  const EMPTY = { category: '', indicator_name: '', target_2030: '', current_performance: '', description: '' };
+  const EMPTY = { category: '', indicator_name: '', target_2030: '', current_performance: '', description: '', reference_url: '' };
   const [form, setForm] = useState(kpi ? {
     category:            kpi.category            ?? '',
     indicator_name:      kpi.indicator_name       ?? '',
     target_2030:         kpi.target_2030          ?? '',
     current_performance: kpi.current_performance  ?? '',
     description:         kpi.description          ?? '',
+    reference_url:       kpi.reference_url        ?? '',
   } : EMPTY);
 
   const inp = 'w-full bg-white border border-sky-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-sky-400/20 focus:border-sky-400 transition-all text-slate-800 font-medium';
+
+  const isValidUrl = (url) => { try { new URL(url); return true; } catch { return false; } };
 
   return (
     <tr className={`ring-2 ring-inset ${isNew ? 'bg-emerald-50/60 ring-emerald-200' : 'bg-sky-50/60 ring-sky-200'}`}>
@@ -117,6 +120,33 @@ function EditableRow({ kpi, onSave, onCancel, isSaving, isNew = false }) {
           onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
           placeholder="หมายเหตุ" />
       </td>
+
+      {/* ── ลิ้งอ้างอิง ── */}
+      <td className="px-3 py-2 align-top min-w-[180px]">
+        <div className="relative">
+          <Link2 size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            className={`${inp} pl-6`}
+            value={form.reference_url}
+            onChange={e => setForm(f => ({ ...f, reference_url: e.target.value }))}
+            placeholder="https://..."
+          />
+        </div>
+        {form.reference_url && isValidUrl(form.reference_url) && (
+          <a
+            href={form.reference_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-sky-600 hover:underline"
+          >
+            <ExternalLink size={9} /> ทดสอบลิ้ง
+          </a>
+        )}
+        {form.reference_url && !isValidUrl(form.reference_url) && (
+          <p className="mt-1 text-[10px] text-rose-500 font-bold">URL ไม่ถูกต้อง</p>
+        )}
+      </td>
+
       <td className="px-3 py-2 align-top">
         <div className="flex flex-col gap-1.5">
           <button onClick={() => onSave(kpi?.id ?? null, form)} disabled={isSaving || !form.indicator_name.trim()}
@@ -249,6 +279,7 @@ export default function ManageSDGs() {
         target_2030:         form.target_2030.trim() || null,
         current_performance: parseFloat(form.current_performance) || null,
         description:         form.description.trim() || null,
+        reference_url:       form.reference_url?.trim() || null,
         fiscal_year:         fiscalYear === 'All' ? '2569' : fiscalYear,
         period:              period === 'All' ? 'Year-End' : period,
       };
@@ -270,6 +301,7 @@ export default function ManageSDGs() {
 
       queryClient.invalidateQueries({ queryKey: ['manage-sdgs'] });
       queryClient.invalidateQueries({ queryKey: ['overviewData'] });
+      queryClient.invalidateQueries({ queryKey: ['sdgData'] });
     } catch (err) {
       addToast(`เกิดข้อผิดพลาด: ${err.message}`, 'error');
     } finally {
@@ -333,6 +365,7 @@ export default function ManageSDGs() {
         <th className="px-4 py-2.5 w-32">เป้าหมาย 2573</th>
         <th className="px-4 py-2.5 w-24">ผลงาน</th>
         <th className="px-4 py-2.5 w-36">หมายเหตุ</th>
+        <th className="px-4 py-2.5 w-44">📎 ลิ้งอ้างอิง</th>
         <th className="px-4 py-2.5 w-28 text-center">จัดการ</th>
       </tr>
     </thead>
@@ -502,6 +535,24 @@ export default function ManageSDGs() {
                               {/* หมายเหตุ */}
                               <td className="px-4 py-3">
                                 <span className="text-xs text-slate-400 italic line-clamp-2">{kpi.description || '—'}</span>
+                              </td>
+                              {/* ลิ้งอ้างอิง */}
+                              <td className="px-4 py-3">
+                                {kpi.reference_url ? (
+                                  <a
+                                    href={kpi.reference_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-50 border border-sky-200 text-sky-700 hover:bg-sky-100 hover:border-sky-300 transition-all text-[11px] font-black whitespace-nowrap max-w-[160px] truncate"
+                                    title={kpi.reference_url}
+                                  >
+                                    <Link2 size={11} className="shrink-0" />
+                                    <span className="truncate">ดูเอกสาร</span>
+                                    <ExternalLink size={9} className="shrink-0 opacity-60" />
+                                  </a>
+                                ) : (
+                                  <span className="text-slate-300 text-sm">—</span>
+                                )}
                               </td>
                               {/* Actions */}
                               <td className="px-4 py-3">

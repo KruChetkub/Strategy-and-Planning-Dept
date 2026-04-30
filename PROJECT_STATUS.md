@@ -1,6 +1,6 @@
 # 📑 KPI Monitoring System - Project Status & Documentation
 
-ฉบับอัปเดตล่าสุด: **2026-04-28**
+ฉบับอัปเดตล่าสุด: **2026-04-30**
 
 ---
 
@@ -12,7 +12,57 @@
 
 ---
 
-## 🛡️ อัปเดตล่าสุด (2026-04-28) - Historical Data Snapshots & UI Polish
+## 📌 อัปเดตล่าสุด (2026-04-30) — Reference Link Feature สำหรับ Health KPI
+
+> **เป้าหมาย**: ให้ผู้ใช้สามารถแนบลิ้งอ้างอิงเอกสารประกอบตัวชี้วัด Health KPI (1 ลิ้ง ต่อ 1 ตัวชี้วัด) และเข้าถึงได้โดยตรงจาก Dashboard
+
+### 🗄️ Database Migration (ต้องรันก่อนใช้งาน)
+```sql
+ALTER TABLE health_indicators ADD COLUMN IF NOT EXISTS reference_url TEXT;
+```
+> ⚠️ **สำคัญ**: ต้องรันใน Supabase → SQL Editor ก่อน มิฉะนั้นการบันทึก/แสดงลิ้งจะไม่ทำงาน
+
+### ✅ DataEntryHealth.jsx (`/entry-health`)
+- เพิ่มฟิลด์ **"ลิ้งอ้างอิง / เอกสารประกอบตัวชี้วัด"** (type=url) ต่อจากช่อง "ผลงาน" ในฟอร์ม
+- มี URL validation — ต้องเริ่มต้นด้วย `https://` และรูปแบบ URL ถูกต้อง
+- มี **Live URL Preview** + ปุ่มคลิกทดสอบลิ้งก่อนบันทึก
+- **โหมด "Save & Next" (กดเขตถัดไป)** → คงค่า `referenceUrl` ไว้ (ตัวชี้วัดเดิม ใช้ลิ้งร่วมกัน)
+- **โหมด "เริ่มตัวชี้วัดใหม่"** → ล้าง `referenceUrl` พร้อมกับฟิลด์อื่น
+- บันทึกลง column `reference_url` ใน `health_indicators`
+
+### ✅ DashboardHealth.jsx (`/healthkpi`)
+- ดึง `reference_url` จาก `rawMappedData` พร้อม logic `useMemo` → `indicatorReferenceUrl`
+- กฎ **1 ลิ้ง ต่อ 1 ตัวชี้วัด** = ดึงลิ้งแรกที่ไม่ null ของตัวชี้วัดที่เลือก
+- แสดงปุ่ม **"ดูเอกสาร / ลิ้งอ้างอิง"** (Sky Blue) ใน **KPI Template box** ด้านขวา — Conditional Rendering (ไม่แสดงถ้าไม่มีลิ้ง)
+- โค้ดถูก reformat เป็น Prettier style (double quotes, multi-line JSX) โดย user
+
+### ✅ ManageHealth.jsx (`/manage/health`)
+- เพิ่ม **"Link Bar"** ใต้แถบชื่อตัวชี้วัดหลัก (MasterHeader) ทุกตัว
+- มี 3 สถานะ:
+  - **ยังไม่มีลิ้ง** → แสดง `+ เพิ่มลิ้งอ้างอิง` (สีดำ ขนาด 11px)
+  - **มีลิ้งอยู่แล้ว** → แสดง URL คลิกได้ + ปุ่ม `✏️ แก้ไขลิ้ง`
+  - **กำลังแก้ไข** → แสดง Input + ปุ่มบันทึก/ยกเลิก พร้อม URL Validation
+- Logic: `handleSaveLink()` → update **ทุกแถวที่มี indicator_name เดียวกัน** ใน Supabase (รับประกัน 1 ลิ้งต่อตัวชี้วัดโดยอัตโนมัติ)
+- เพิ่ม icons: `Link2`, `ExternalLink` จาก `lucide-react`
+- เพิ่ม state: `editingLinkFor`, `linkInput`, `isSavingLink`
+
+---
+
+## 🛡️ อัปเดตก่อนหน้า (2026-04-29) - Visitor Analytics & Data Sorting
+- **Visitor Analytics Implementation**:
+  - ติดตั้ง Vercel Analytics (\`@vercel/analytics\`) สำหรับการเก็บสถิติพื้นฐาน
+  - สร้าง Custom Hook \`useVisitorCount.js\` สำหรับดึงและนับผู้เข้าชมจาก Supabase (\`visitor_sessions\`)
+  - ใช้ \`localStorage\` (Session-based) ป้องกันการนับซ้ำเมื่อ Refresh (F5) 
+- **UI Enhancement (ดูสถิติเว็บไซต์)**:
+  - เพิ่มคอมโพเนนต์ \`VisitorBadge\` แสดงยอดผู้เข้าชมรวมและของวันนี้แบบ Pro-style
+  - ฝังคอมโพเนนต์เข้าเป็นส่วนหนึ่งของ Footer ในหน้า \`DashboardOverview.jsx\` ให้ดูกลมกลืนและเป็นมืออาชีพ
+- **Bug Fix & Data Sorting**:
+  - แก้ไขปัญหาตาราง "สมุดบันทึกผลการดำเนินงานรายเขตฯ" ใน \`DashboardHealth.jsx\` ให้เรียงลำดับเขตสุขภาพตามหมายเลข (1-13) อัตโนมัติเสมอ ป้องกันปัญหาการแสดงผลเพี้ยนเมื่อบันทึกข้อมูลสลับลำดับกัน
+  - ตั้งค่าให้ "รายงานภาพรวม" แสดงอยู่แถวบนสุดเสมอเพื่อความรวดเร็วในการดูสรุปยอด
+
+---
+
+## 🛡️ อัปเดตก่อนหน้า (2026-04-28) - Historical Data Snapshots & UI Polish
 - **ระบบตัวกรองข้อมูลย้อนหลัง (Global Temporal Filtering / Phase 4)**: 
   - เพิ่มตัวกรอง "ปีงบประมาณ" (Fiscal Year) และ "ไตรมาส" (Period) ในหน้าแดชบอร์ดทั้งหมด (`DashboardOverview`, `Dashboard` (SDGs), `DashboardHealth`)
   - ซิงค์สถานะตัวกรองผ่าน URL Parameters (`?year=...&period=...`) ทำให้สามารถแชร์ลิงก์หรือรีเฟรชหน้าแล้วค่าไม่หาย
@@ -74,6 +124,7 @@
 | `b_value` | numeric | ประชากร B (ตัวหาร) |
 | `performance` | numeric | ผลงาน (%) |
 | `target_q1–q4` | text | เป้าหมายรายไตรมาส |
+| `reference_url` | text | ลิ้งอ้างอิงเอกสารประกอบตัวชี้วัด **(เพิ่ม 2026-04-30)** |
 | `is_type_a` | bool | ตัวชี้วัด Type A |
 | `is_deleted` | boolean | สำหรับ Soft Delete |
 
@@ -101,17 +152,20 @@
 - **Pie Chart**: สัดส่วน Pass/Fail/Pending
 - **Overview Mode**: เมื่อยังไม่เลือก KPI แสดง Top 5 ที่ควรเร่งรัด
 - รองรับ "รายงานภาพรวม" (Overall fallback) และ Aggregated regional avg
+- ✅ **(2026-04-30)** แสดงปุ่ม **"ดูเอกสาร / ลิ้งอ้างอิง"** ใน KPI Template box — Conditional (แสดงเฉพาะเมื่อมีลิ้ง)
 
 ### 📝 4. DataEntry SDGs (`/entry`)
 - ฟอร์มบันทึกตัวชี้วัด SDGs → `sdg_indicators`
 - Success/Error Modal แบบ Premium
 - ล้างฟอร์มอัตโนมัติหลังบันทึก (เก็บ category ไว้)
+- ✅ **แนบลิ้งอ้างอิง** ต่อจากหมายเหตุ + แสดงในตาราง Dashboard SDGs
 
 ### 🏥 5. DataEntryHealth (`/entry-health`)
 - ฟอร์มบันทึก Health KPI รายเขตสุขภาพ → `health_indicators`
 - Dropdown 13 เขต + รายงานภาพรวม
 - **Live Preview Status**: ประเมินผลทันทีขณะกรอก เทียบกับเป้าหมาย Q ปัจจุบัน
 - 2 โหมด: "บันทึก & กรอกเขตถัดไป" และ "บันทึก & เริ่มตัวชี้วัดใหม่"
+- ✅ **(2026-04-30)** แนบ **ลิ้งอ้างอิง** ต่อจากผลงาน + บันทึกลง `reference_url`
 
 ### 📦 6. ManageKPIs (Bulk Import SDGs)
 - วาง (Ctrl+V) ข้อมูลจาก Excel → Parse → Preview Table
@@ -214,4 +268,4 @@ calc_type = "direct"  → กรอกแค่ performance (%) ตรงๆ
 
 ---
 
-*จัดทำโดย: Pichet & AI Assistant | อัปเดตล่าสุด: 2026-04-28*
+*จัดทำโดย: Pichet & AI Assistant | อัปเดตล่าสุด: 2026-04-30*
