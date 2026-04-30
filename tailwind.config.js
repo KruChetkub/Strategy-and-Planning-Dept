@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Kanit', 'sans-serif'],
+        sans: ['Sarabun', 'sans-serif'],
       },
       letterSpacing: {
         tight: '0em',

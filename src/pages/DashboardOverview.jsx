@@ -555,7 +555,7 @@ export default function DashboardOverview() {
       ? "from-slate-800 via-slate-700 to-slate-900"
       : passedPct >= 50
         ? "from-slate-800 via-slate-800 to-orange-900"
-        : "from-slate-900 via-rose-950 to-slate-900";
+        : "from-sky-800 via-blue-700 to-blue-900";
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12 fade-in-up">
@@ -645,14 +645,14 @@ export default function DashboardOverview() {
 
             {/* Middle: Target Text */}
             <div className="flex-1 flex justify-center text-center">
-              <div className="bg-white/5 border border-white/10 px-4 py-3 rounded-2xl backdrop-blur-sm">
+              <div className="bg-white/10 border border-white/18 px-4 py-4 rounded-2xl shadow-inner">
                 <p className="text-white text-base md:text-lg font-medium tracking-wide">
                   บรรลุเป้าหมาย{" "}
-                  <span className="text-white font-black text-lg">
+                  <span className="text-white font-black text-xl">
                     {stats.totalPassed}
                   </span>{" "}
                   จาก{" "}
-                  <span className="text-white font-black text-lg">
+                  <span className="text-white font-black text-xl">
                     {stats.totalKPIs}
                   </span>{" "}
                   ตัวชี้วัดทั้งหมด
@@ -662,48 +662,48 @@ export default function DashboardOverview() {
 
             {/* Right: Status Pill Summary */}
             <div className="flex flex-wrap justify-end gap-3 min-w-max">
-              <div className="flex items-center gap-2.5 bg-emerald-500/20 border border-emerald-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
-                <CheckCircle2 size={18} className="text-emerald-400" />
+              <div className="flex items-center gap-3 bg-green-600 border border-green-500 px-5 py-3 rounded-2xl shadow-lg transition-transform hover:scale-105">
+                <CheckCircle2 size={20} className="text-white" />
                 <div>
-                  <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">
+                  <p className="text-[1.8rem] font-black text-white tabular-nums leading-none mb-1">
                     {stats.totalPassed}
                   </p>
-                  <p className="text-white text-xs font-bold uppercase tracking-wider">
+                  <p className="text-white text-[11px] font-bold uppercase tracking-wider">
                     บรรลุเป้าหมาย
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2.5 bg-amber-500/20 border border-amber-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
-                <AlertTriangle size={18} className="text-amber-400" />
+              <div className="flex items-center gap-3 bg-yellow-400 border border-yellow-300 px-5 py-3 rounded-2xl shadow-lg transition-transform hover:scale-105">
+                <AlertTriangle size={20} className="text-slate-900" />
                 <div>
-                  <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">
+                  <p className="text-[1.8rem] font-black text-slate-900 tabular-nums leading-none mb-1">
                     {stats.totalWarning}
                   </p>
-                  <p className="text-white text-xs font-bold uppercase tracking-wider">
+                  <p className="text-slate-900 text-[11px] font-bold uppercase tracking-wider">
                     เฝ้าระวัง
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2.5 bg-orange-500/20 border border-orange-400/30 backdrop-blur-sm px-5 py-3 rounded-2xl">
-                <AlertOctagon size={18} className="text-orange-400" />
+              <div className="flex items-center gap-3 bg-orange-500 border border-orange-400 px-5 py-3 rounded-2xl shadow-lg transition-transform hover:scale-105">
+                <AlertOctagon size={20} className="text-white" />
                 <div>
-                  <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">
+                  <p className="text-[1.8rem] font-black text-white tabular-nums leading-none mb-1">
                     {stats.totalAtRisk}
                   </p>
-                  <p className="text-white text-xs font-bold uppercase tracking-wider">
+                  <p className="text-white text-[11px] font-bold uppercase tracking-wider">
                     ระดับเสี่ยง
                   </p>
                 </div>
               </div>
               <div
-                className={`flex items-center gap-2.5 border backdrop-blur-sm px-5 py-3 rounded-2xl ${stats.totalCritical > 0 ? "bg-rose-500/30 border-rose-400/50 pulse-ring-rose" : "bg-rose-500/10 border-rose-400/20"}`}
+                className={`flex items-center gap-3 border px-5 py-3 rounded-2xl shadow-lg transition-transform hover:scale-105 ${stats.totalCritical > 0 ? "bg-red-600 border-red-500 pulse-ring-rose" : "bg-red-800/60 border-red-500/30"}`}
               >
-                <XCircle size={18} className="text-rose-400" />
+                <XCircle size={20} className="text-white" />
                 <div>
-                  <p className="text-[1.7rem] font-black text-white tabular-nums leading-none">
+                  <p className="text-[1.8rem] font-black text-white tabular-nums leading-none mb-1">
                     {stats.totalCritical}
                   </p>
-                  <p className="text-white text-xs font-bold uppercase tracking-wider">
+                  <p className="text-white text-[11px] font-bold uppercase tracking-wider">
                     ขั้นวิกฤติ
                   </p>
                 </div>
