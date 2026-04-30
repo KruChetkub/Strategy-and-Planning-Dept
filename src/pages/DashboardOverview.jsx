@@ -555,7 +555,7 @@ export default function DashboardOverview() {
       ? "from-slate-800 via-slate-700 to-slate-900"
       : passedPct >= 50
         ? "from-slate-800 via-slate-800 to-orange-900"
-        : "from-sky-800 via-blue-700 to-blue-900";
+        : "from-green-100 via-cyan-100 to-blue-200";
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12 fade-in-up">
@@ -563,7 +563,7 @@ export default function DashboardOverview() {
           HERO SECTION — Big number, status summary
       ════════════════════════════════════════════════════════════════════ */}
       <div
-        className={`relative overflow-hidden bg-gradient-to-r ${heroGradient} rounded-3xl p-8 md:p-10 text-white shadow-2xl`}
+        className={`relative overflow-hidden bg-gradient-to-r ${heroGradient} rounded-3xl p-8 md:p-10 text-slate-900 shadow-2xl`}
       >
         {/* Background texture */}
         <div className="absolute inset-0 opacity-5">
@@ -582,15 +582,15 @@ export default function DashboardOverview() {
         <div className="relative z-10 flex flex-col gap-6 w-full">
           {/* Top Row: Title & Filters */}
           <div className="flex flex-wrap items-center gap-4">
-            <p className="text-white font-black uppercase tracking-widest text-2xl md:text-3xl flex items-center gap-3">
+            <p className="text-slate-900 font-black uppercase tracking-widest text-2xl md:text-3xl flex items-center gap-3">
               <Target size={32} /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
             </p>
-            <div className="hidden md:block h-5 w-px bg-white/20"></div>
+            <div className="hidden md:block h-5 w-px bg-slate-900/20"></div>
             <div className="flex items-center gap-2">
               <select
                 value={fiscalYear}
                 onChange={(e) => setGlobalFilter(e.target.value, period)}
-                className="bg-white/10 hover:bg-white/20 transition-colors border border-white/20 text-white rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-white/50 appearance-none cursor-pointer"
+                className="bg-white/50 hover:bg-white/80 transition-colors border border-slate-900/10 text-slate-900 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/50 appearance-none cursor-pointer"
               >
                 <option value="All" className="text-slate-800">
                   ทุกปีงบประมาณ
@@ -604,7 +604,7 @@ export default function DashboardOverview() {
               <select
                 value={period}
                 onChange={(e) => setGlobalFilter(fiscalYear, e.target.value)}
-                className="bg-white/10 hover:bg-white/20 transition-colors border border-white/20 text-white rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-white/50 appearance-none cursor-pointer"
+                className="bg-white/50 hover:bg-white/80 transition-colors border border-slate-900/10 text-slate-900 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/50 appearance-none cursor-pointer"
               >
                 <option value="All" className="text-slate-800">
                   ทุกไตรมาส
@@ -636,8 +636,8 @@ export default function DashboardOverview() {
                 {passedPct}
               </span>
               <div className="pb-2">
-                <span className="text-[2.1rem] font-black text-white">%</span>
-                <p className="text-white text-base font-bold uppercase tracking-wider">
+                <span className="text-[2.1rem] font-black text-slate-900">%</span>
+                <p className="text-slate-900 text-base font-bold uppercase tracking-wider">
                   ภาพรวมการดำเนินงาน
                 </p>
               </div>
@@ -645,14 +645,14 @@ export default function DashboardOverview() {
 
             {/* Middle: Target Text */}
             <div className="flex-1 flex justify-center text-center">
-              <div className="bg-white/10 border border-white/18 px-4 py-4 rounded-2xl shadow-inner">
-                <p className="text-white text-base md:text-lg font-medium tracking-wide">
+              <div className="bg-white/60 border border-white/80 px-4 py-4 rounded-2xl shadow-sm backdrop-blur-md">
+                <p className="text-slate-900 text-base md:text-lg font-medium tracking-wide">
                   บรรลุเป้าหมาย{" "}
-                  <span className="text-white font-black text-xl">
+                  <span className="text-slate-900 font-black text-xl">
                     {stats.totalPassed}
                   </span>{" "}
                   จาก{" "}
-                  <span className="text-white font-black text-xl">
+                  <span className="text-slate-900 font-black text-xl">
                     {stats.totalKPIs}
                   </span>{" "}
                   ตัวชี้วัดทั้งหมด
