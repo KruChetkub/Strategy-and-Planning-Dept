@@ -645,7 +645,7 @@ export default function DashboardOverview() {
 
             {/* Middle: Target Text */}
             <div className="flex-1 flex justify-center text-center">
-              <div className="bg-white/5 border border-white/10 px-6 py-3 rounded-2xl backdrop-blur-sm">
+              <div className="bg-white/5 border border-white/10 px-4 py-3 rounded-2xl backdrop-blur-sm">
                 <p className="text-white text-base md:text-lg font-medium tracking-wide">
                   บรรลุเป้าหมาย{" "}
                   <span className="text-white font-black text-lg">
@@ -828,7 +828,7 @@ export default function DashboardOverview() {
                   ตัวชี้วัดภายใต้แผนการขับเคลื่อนการพัฒนาที่ยั่งยืน
                 </h3>
                 <h3 className="text-[1.1rem] font-black text-slate-950">
-                  SDGs เป้าหมายที่ 3
+                  SDGs เป้าหมายที่ 3 ในส่วนที่เกี่ยวข้องกับกรมควบคุมโรค
                 </h3>
                 <p className="text-sm text-slate-950 font-medium">
                   Sustainable Development Goals
@@ -916,10 +916,10 @@ export default function DashboardOverview() {
               </div>
               <div>
                 <h3 className="text-[1.1rem] font-black text-slate-950">
-                  ตัวชี้วัดกระทรวงสาธารณสุขในส่วนที่เกี่ยวข้องกับ
+                  ตัวชี้วัดกระทรวงสาธารณสุข ในส่วนที่เกี่ยวข้อง
                 </h3>
                 <h3 className="text-[1.1rem] font-black text-slate-950">
-                  กรมควบคุมโรค
+                  กับกรมควบคุมโรค
                 </h3>
 
                 <p className="text-sm text-slate-950 font-medium">Health KPI</p>
