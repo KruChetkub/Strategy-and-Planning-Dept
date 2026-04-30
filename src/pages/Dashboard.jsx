@@ -112,9 +112,16 @@ export default function Dashboard({ categoryFilter }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const fiscalYear = searchParams.get('year') || 'All';
   const urlPeriod = searchParams.get('period') || 'All';
+  const indicatorParam = searchParams.get('indicator') || '';
 
   const setGlobalFilter = (y, p) => {
-    setSearchParams({ year: y, period: p });
+    setSearchParams({ year: y, period: p, indicator: indicatorParam });
+  };
+
+  const clearIndicatorFilter = () => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('indicator');
+    setSearchParams(newParams);
   };
 
   const { data, isLoading, error } = useQuery({
@@ -163,8 +170,11 @@ export default function Dashboard({ categoryFilter }) {
         String(kpi.category).toLowerCase().includes(String(categoryFilter).toLowerCase())
       );
     }
+    if (indicatorParam) {
+      mapped = mapped.filter(kpi => kpi.title === indicatorParam);
+    }
     return mapped;
-  }, [data, categoryFilter]);
+  }, [data, categoryFilter, indicatorParam]);
 
   const { passed, pieData, barData } = useMemo(() => {
     const catStats = {};
@@ -317,6 +327,26 @@ export default function Dashboard({ categoryFilter }) {
             </div>
           </div>
       </div>
+
+      {indicatorParam && (
+        <div className="bg-sky-50 border border-sky-200 px-5 py-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-sky-100 shadow-sm shrink-0">
+              <Target size={20} className="text-sky-600" />
+            </div>
+            <div>
+              <p className="text-sky-900 font-black text-base">กำลังแสดงผลเฉพาะตัวชี้วัด</p>
+              <p className="text-sky-700 font-semibold text-sm mt-0.5">"{indicatorParam}"</p>
+            </div>
+          </div>
+          <button 
+            onClick={clearIndicatorFilter} 
+            className="text-sky-700 hover:text-white bg-white hover:bg-sky-600 font-bold text-sm px-4 py-2 rounded-xl border border-sky-200 hover:border-sky-600 shadow-sm transition-all whitespace-nowrap shrink-0"
+          >
+            ดูตัวชี้วัดทั้งหมด
+          </button>
+        </div>
+      )}
 
       {/* TOP OVERVIEW ROW (Redesigned for Professional Clarity) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

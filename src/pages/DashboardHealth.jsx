@@ -273,7 +273,29 @@ export default function DashboardHealth() {
     return Array.from(mains);
   }, [rawMappedData]);
 
-  const [selectedMain, setSelectedMain] = useState("");
+  const indicatorParam = searchParams.get("indicator") || "";
+  const [selectedMain, setSelectedMain] = useState(indicatorParam);
+
+  useEffect(() => {
+    if (indicatorParam && uniqueMainIndicators.includes(indicatorParam)) {
+      setSelectedMain(indicatorParam);
+    } else if (indicatorParam && !selectedMain && uniqueMainIndicators.length > 0) {
+      // If indicatorParam is present but maybe not loaded yet, wait for uniqueMainIndicators
+      if (uniqueMainIndicators.includes(indicatorParam)) {
+        setSelectedMain(indicatorParam);
+      }
+    }
+  }, [indicatorParam, uniqueMainIndicators]);
+
+  const handleMainChange = (e) => {
+    setSelectedMain(e.target.value);
+    // Remove indicator param when manually changing
+    if (indicatorParam) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("indicator");
+      setSearchParams(newParams);
+    }
+  };
 
   // 3. Extract Unique Sub-Indicators
   const uniqueSubIndicators = useMemo(() => {
@@ -746,7 +768,7 @@ export default function DashboardHealth() {
             </label>
             <select
               value={selectedMain}
-              onChange={(e) => setSelectedMain(e.target.value)}
+              onChange={handleMainChange}
               className="w-full xl:w-[350px] bg-white border border-slate-300 text-emerald-800 font-bold px-4 py-2.5 rounded-xl outline-none focus:border-emerald-500 transition-colors cursor-pointer text-sm shadow-sm truncate"
             >
               <option value="" disabled className="text-slate-400">

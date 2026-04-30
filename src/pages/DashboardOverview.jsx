@@ -35,18 +35,56 @@ const fetchAllDashboards = async (year, period) => {
 };
 
 const evaluateSDGStatus = (current, target) => {
-  if (current === '' || current === null || current === undefined) return { raw: 'pending' };
-  const curVal = parseFloat(current);
-  const tStr = String(target).toLowerCase();
-  const match = tStr.match(/([\d.]+)/);
-  if (!match) return { raw: 'pending' };
-  const targetVal = parseFloat(match[1]);
-  if (isNaN(curVal) || isNaN(targetVal) || targetVal === 0) return { raw: 'pending' };
-  const isLowerBetter = tStr.includes('<') || tStr.includes('≤') || tStr.includes('ลด');
-  let pct = isLowerBetter ? (curVal === 0 ? 100 : (targetVal / curVal) * 100) : (curVal / targetVal) * 100;
-  if (pct >= 100) return { raw: 'passed_100' };
-  if (pct >= 75)  return { raw: 'failed_75' };
-  if (pct >= 50)  return { raw: 'failed_50' };
+  if (current === '' || current === null || current === undefined) {
+    return { raw: 'pending' };
+  }
+  
+  const curStr = String(current ?? '');
+  const curMatch = curStr.match(/([\d.]+)/);
+  if (!curMatch && curStr !== '0') return { raw: 'pending' };
+  
+  const curVal = curMatch ? parseFloat(curMatch[1]) : 0;
+  let targetStr = String(target ?? '').toLowerCase();
+  
+  if (targetStr.includes('ครึ่งหนึ่ง')) {
+    targetStr = targetStr.replace('ครึ่งหนึ่ง', '50');
+  }
+  
+  const matches = [...targetStr.matchAll(/([\d.]+)(%|ร้อยละ)?/g)];
+  let targetVal = 0;
+  
+  const percentMatch = matches.find(m => m[2]);
+  if (percentMatch) {
+    targetVal = parseFloat(percentMatch[1]);
+  } else {
+    for (const m of matches) {
+      const val = parseFloat(m[1]);
+      if ((val >= 2500 && val <= 2600) || (val >= 2000 && val <= 2100)) continue;
+      if (targetStr.startsWith(m[1]) && targetStr.includes(' ')) continue;
+      targetVal = val;
+    }
+  }
+  
+  if (isNaN(curVal) || isNaN(targetVal) || targetVal === 0) {
+    return { raw: 'pending' };
+  }
+  
+  const hasReductionKeyword = targetStr.includes('ลด') || targetStr.includes('ลดลง');
+  const hasPercentageKeyword = targetStr.includes('ร้อยละ') || targetStr.includes('%') || targetStr.includes('50');
+  
+  const isReductionTarget = hasReductionKeyword && (hasPercentageKeyword || targetStr.includes('ลงครึ่งหนึ่ง'));
+  const isLowerBetter = !isReductionTarget && (targetStr.includes('<') || targetStr.includes('≤') || targetStr.includes('ไม่เกิน') || targetStr.includes('น้อยกว่า'));
+  
+  let percentage = 0;
+  if (isLowerBetter) {
+    percentage = curVal === 0 ? 100 : (targetVal / curVal) * 100;
+  } else {
+    percentage = (curVal / targetVal) * 100;
+  }
+  
+  if (percentage >= 100) return { raw: 'passed_100' };
+  if (percentage >= 75)  return { raw: 'failed_75' };
+  if (percentage >= 50)  return { raw: 'failed_50' };
   return { raw: 'failed_0' };
 };
 
@@ -140,6 +178,7 @@ export default function DashboardOverview() {
       allIndicators.push({
         id: `sdg-${row.id}`, system: 'SDGs',
         title: row.indicator_name,
+        originalTitle: row.indicator_name,
         category: row.category || 'ไม่ระบุ',
         target: row.target_2030,
         performance: row.current_performance,
@@ -158,7 +197,7 @@ export default function DashboardOverview() {
       let title = row.indicator_name;
       if (!title || title === 'ไม่ระบุ') return;
       if (row.is_type_a) title = `[Health] ${title}`;
-      if (!healthGrouped.has(title)) healthGrouped.set(title, { title, category: row.kpi_group || 'ไม่ระบุ', rows: [] });
+      if (!healthGrouped.has(title)) healthGrouped.set(title, { title, originalTitle: row.indicator_name, category: row.kpi_group || 'ไม่ระบุ', rows: [] });
       healthGrouped.get(title).rows.push(row);
     });
 
@@ -184,7 +223,7 @@ export default function DashboardOverview() {
         group.rows.forEach(r => { const p = parseFloat(r.performance); if (!isNaN(p)) { tot += p; cnt++; } });
         if (cnt > 0) { finalPerf = (tot / cnt).toFixed(2); finalStatus = evaluateHealthStatus(finalPerf, finalTarget).raw; }
       }
-      allIndicators.push({ id: `health-${title}`, system: 'Health KPI', title, category: group.category, target: finalTarget, performance: finalPerf, status: finalStatus });
+      allIndicators.push({ id: `health-${title}`, system: 'Health KPI', title, originalTitle: group.originalTitle, category: group.category, target: finalTarget, performance: finalPerf, status: finalStatus });
       if (finalStatus === 'passed_100') healthStats.passed++;
       else if (finalStatus === 'failed_75') healthStats.warning++;
       else if (finalStatus === 'failed_50') healthStats.atRisk++;
@@ -365,7 +404,11 @@ export default function DashboardOverview() {
                 const rank = i + 1;
                 const rankColor = rank === 1 ? 'bg-rose-500' : rank === 2 ? 'bg-orange-500' : rank === 3 ? 'bg-amber-500' : 'bg-slate-300';
                 return (
-                  <div key={kpi.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/70 transition-colors group">
+                  <div 
+                    key={kpi.id} 
+                    onClick={() => navigate(`/${kpi.system === 'SDGs' ? 'sdgs' : 'healthkpi'}?indicator=${encodeURIComponent(kpi.originalTitle)}`)}
+                    className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/70 transition-colors group cursor-pointer"
+                  >
                     <span className={`w-7 h-7 rounded-lg ${rankColor} text-white text-xs font-black flex items-center justify-center flex-shrink-0`}>{rank}</span>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-slate-950 text-base truncate group-hover:text-slate-950 transition-colors">{kpi.title}</p>
@@ -576,7 +619,11 @@ export default function DashboardOverview() {
                   const s = STATUS[kpi.status] || STATUS.pending;
                   const Icon = s.Icon;
                   return (
-                    <tr key={`${kpi.id}-${idx}`} className="hover:bg-slate-50/60 transition-colors group">
+                    <tr 
+                      key={`${kpi.id}-${idx}`} 
+                      onClick={() => navigate(`/${kpi.system === 'SDGs' ? 'sdgs' : 'healthkpi'}?indicator=${encodeURIComponent(kpi.originalTitle)}`)}
+                      className="hover:bg-slate-50/60 transition-colors group cursor-pointer"
+                    >
                       <td className="px-6 py-4">
                         <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wide ${kpi.system === 'SDGs' ? 'bg-sky-50 text-sky-600 border border-sky-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
                           {kpi.system === 'SDGs' ? 'SDGs' : 'Health'}
