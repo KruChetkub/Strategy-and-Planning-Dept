@@ -171,10 +171,22 @@ export default function DashboardOverview() {
     if (!data) return { stats: null };
     const [sdgsRaw, healthRaw] = data;
     const allIndicators = [];
-    const sdgsStats = { passed: 0, warning: 0, atRisk: 0, critical: 0, pending: 0, total: sdgsRaw.length };
+    const sdgsStats = { passed: 0, warning: 0, atRisk: 0, critical: 0, pending: 0, total: 0, absoluteTotal: sdgsRaw.length, reported: 0 };
 
     sdgsRaw.forEach((row) => {
+      const hasData = row.current_performance !== null && row.current_performance !== undefined && String(row.current_performance).trim() !== '';
+      
+      if (hasData) {
+        sdgsStats.reported++;
+      }
+      
+      // Do not skip from calculation, so the total matches the SDGs dashboard (21 total).
+      // They will just be evaluated as 'pending' and won't affect the Passed/Warning/Critical counts.
+      
+      sdgsStats.total++;
+      
       const status = evaluateSDGStatus(row.current_performance, row.target_2030);
+      
       allIndicators.push({
         id: `sdg-${row.id}`, system: 'SDGs',
         title: row.indicator_name,
@@ -196,12 +208,39 @@ export default function DashboardOverview() {
     healthRaw.forEach(row => {
       let title = row.indicator_name;
       if (!title || title === 'ไม่ระบุ') return;
-      if (row.is_type_a) title = `[Health] ${title}`;
-      if (!healthGrouped.has(title)) healthGrouped.set(title, { title, originalTitle: row.indicator_name, category: row.kpi_group || 'ไม่ระบุ', rows: [] });
-      healthGrouped.get(title).rows.push(row);
+      
+      const originalTitle = title;
+      const subIndicator = row.kpi_group && row.kpi_group !== 'ALL' && row.kpi_group !== 'ไม่ระบุ' ? row.kpi_group : '';
+      
+      let displayTitle = subIndicator ? `${title} — ${subIndicator}` : title;
+      let mapKey = displayTitle;
+
+      if (row.is_type_a) {
+        displayTitle = `[Health] ${displayTitle}`;
+        mapKey = displayTitle;
+      }
+      
+      if (!healthGrouped.has(mapKey)) {
+        healthGrouped.set(mapKey, { 
+          title: displayTitle, 
+          originalTitle: originalTitle, 
+          category: row.kpi_group || 'ไม่ระบุ', 
+          rows: [] 
+        });
+      }
+      healthGrouped.get(mapKey).rows.push(row);
     });
 
-    const healthStats = { passed: 0, warning: 0, atRisk: 0, critical: 0, pending: 0, total: healthGrouped.size };
+    const healthMainIndicators = new Set();
+    healthRaw.forEach(row => {
+      if (row.indicator_name && row.indicator_name !== 'ไม่ระบุ') {
+        healthMainIndicators.add(row.indicator_name);
+      }
+    });
+
+    const healthMainWithData = new Set();
+    const healthStats = { passed: 0, warning: 0, atRisk: 0, critical: 0, pending: 0, total: 0, absoluteTotal: healthMainIndicators.size, reported: 0 };
+    
     healthGrouped.forEach((group, title) => {
       let finalPerf = '', finalTarget = '', finalStatus = 'pending';
       const overallRow = group.rows.find(r => {
@@ -220,9 +259,43 @@ export default function DashboardOverview() {
           finalTarget = tm[currentQ.targetKey] ?? '';
         }
         let tot = 0, cnt = 0;
-        group.rows.forEach(r => { const p = parseFloat(r.performance); if (!isNaN(p)) { tot += p; cnt++; } });
+        group.rows.forEach(r => { 
+          const pStr = String(r.performance ?? '').trim();
+          const isValidVal = pStr !== '' && pStr !== '-' && pStr !== '0' && pStr !== '0.00' && pStr !== '0.0';
+          if (isValidVal) {
+            const p = parseFloat(r.performance); 
+            if (!isNaN(p)) { tot += p; cnt++; } 
+          }
+        });
         if (cnt > 0) { finalPerf = (tot / cnt).toFixed(2); finalStatus = evaluateHealthStatus(finalPerf, finalTarget).raw; }
       }
+      
+      let groupHasData = false;
+      group.rows.forEach(r => {
+        const pStr = String(r.performance ?? '').trim();
+        const aStr = String(r.a_value ?? '').trim();
+        const bStr = String(r.b_value ?? '').trim();
+        
+        // ข้ามค่าว่าง, เครื่องหมาย -, และเลข 0 (เพราะฟอร์มบันทึกค่า default เป็น 0 เมื่อไม่ได้กรอก)
+        const isValid = (val) => val !== '' && val !== '-' && val !== '0' && val !== '0.00' && val !== '0.0';
+        
+        if (isValid(pStr) || isValid(aStr) || isValid(bStr)) {
+          groupHasData = true;
+        }
+      });
+
+      const hasData = groupHasData;
+      
+      if (hasData) {
+        healthMainWithData.add(group.originalTitle);
+        healthStats.reported = healthMainWithData.size;
+      }
+      
+      // Do not skip from calculation, so the total matches the Health KPI dashboard.
+      // They will just be evaluated as 'pending' and won't affect the Passed/Warning/Critical counts.
+      
+      healthStats.total++; // Increment total only for indicators with data
+      
       allIndicators.push({ id: `health-${title}`, system: 'Health KPI', title, originalTitle: group.originalTitle, category: group.category, target: finalTarget, performance: finalPerf, status: finalStatus });
       if (finalStatus === 'passed_100') healthStats.passed++;
       else if (finalStatus === 'failed_75') healthStats.warning++;
@@ -375,12 +448,12 @@ export default function DashboardOverview() {
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════
-          BENTO ROW 1 — Urgent Panel + System Health Donut
+          BENTO ROW 1 — Urgent Panel
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
 
-        {/* Urgent Action Panel (2/3 width) */}
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-rose-100 shadow-md overflow-hidden">
+        {/* Urgent Action Panel (Full width) */}
+        <div className="bg-white rounded-3xl border border-rose-100 shadow-md overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-rose-50 bg-rose-50/50">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center">
@@ -436,37 +509,6 @@ export default function DashboardOverview() {
               <p className="text-xs font-bold text-slate-400">และอีก {actionItems.length - 5} รายการ — ดูในตารางสรุปด้านล่าง</p>
             </div>
           )}
-        </div>
-
-        {/* System Health Donut (1/3 width) */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-6 flex flex-col items-center justify-center gap-4">
-              <p className="text-sm font-black text-slate-950 uppercase tracking-[0.2em]">System Health</p>
-          <div className="relative">
-            <DonutRing
-              percent={passedPct}
-              color={passedPct >= 75 ? '#10b981' : passedPct >= 50 ? '#f97316' : '#f43f5e'}
-              size={140}
-              stroke={14}
-            />
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-[2.8rem] font-black text-slate-950 tabular-nums leading-none">{passedPct}</span>
-              <span className="text-[1.2rem] font-black text-slate-950">%</span>
-            </div>
-          </div>
-          <div className="w-full space-y-2">
-            {[
-              { label: 'บรรลุเป้าหมาย', val: stats.totalPassed,   color: 'bg-emerald-500' },
-              { label: 'เฝ้าระวัง',      val: stats.totalWarning,  color: 'bg-amber-400' },
-              { label: 'ระดับเสี่ยง',    val: stats.totalAtRisk,   color: 'bg-orange-500' },
-              { label: 'ขั้นวิกฤติ',     val: stats.totalCritical, color: 'bg-rose-500' },
-            ].map(item => (
-              <div key={item.label} className="flex items-center gap-2">
-                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${item.color}`} />
-                <span className="text-sm text-slate-950 flex-1">{item.label}</span>
-                <span className="text-sm font-black text-slate-950 tabular-nums">{item.val}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -568,6 +610,72 @@ export default function DashboardOverview() {
         </div>
       </div>
 
+      {/* ════════════════════════════════════════════════════════════════════
+          DATA ENTRY COMPLETENESS — Progress Bars
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
+        
+        {/* SDGs Progress */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col justify-center relative overflow-hidden group">
+          <div className="absolute right-0 top-0 w-32 h-32 bg-sky-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
+          
+          <div className="flex justify-between items-end mb-4">
+            <div className="pr-2">
+              <p className="text-slate-500 text-[11px] font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                <Activity size={14} className="text-sky-500" /> SDGs Data Entry
+              </p>
+              <h3 className="text-[17px] leading-tight font-black text-slate-800 tracking-tight whitespace-nowrap">ความคืบหน้า (SDGs)</h3>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="text-3xl font-black text-sky-600">{stats.sdgsStats.reported}</span>
+              <span className="text-sm font-bold text-slate-400 mx-1">/</span>
+              <span className="text-lg font-bold text-slate-600">{stats.sdgsStats.absoluteTotal}</span>
+            </div>
+          </div>
+          
+          <div className="w-full bg-slate-100 rounded-full h-3.5 mb-2 overflow-hidden border border-slate-200/60 shadow-inner">
+            <div 
+              className="bg-gradient-to-r from-sky-400 to-blue-500 h-full rounded-full transition-all duration-1000 ease-out"
+              style={{ width: `${stats.sdgsStats.absoluteTotal > 0 ? (stats.sdgsStats.reported / stats.sdgsStats.absoluteTotal) * 100 : 0}%` }}
+            ></div>
+          </div>
+          <p className="text-right text-[11px] font-black text-slate-500 uppercase tracking-widest">
+            {stats.sdgsStats.absoluteTotal > 0 ? Math.round((stats.sdgsStats.reported / stats.sdgsStats.absoluteTotal) * 100) : 0}% รายงานผลแล้ว
+          </p>
+        </div>
+
+        {/* Health KPI Progress */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col justify-center relative overflow-hidden group">
+          <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
+          
+          <div className="flex justify-between items-end mb-4">
+            <div className="pr-2">
+              <p className="text-slate-500 text-[11px] font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                <Target size={14} className="text-emerald-500" /> Health KPI Data Entry
+              </p>
+              <h3 className="text-[17px] leading-tight font-black text-slate-800 tracking-tight whitespace-nowrap">ความคืบหน้า (Health)</h3>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="text-3xl font-black text-emerald-600">{stats.healthStats.reported}</span>
+              <span className="text-sm font-bold text-slate-400 mx-1">/</span>
+              <span className="text-lg font-bold text-slate-600">{stats.healthStats.absoluteTotal}</span>
+            </div>
+          </div>
+          
+          <div className="w-full bg-slate-100 rounded-full h-3.5 mb-2 overflow-hidden border border-slate-200/60 shadow-inner">
+            <div 
+              className="bg-gradient-to-r from-emerald-400 to-teal-500 h-full rounded-full transition-all duration-1000 ease-out"
+              style={{ width: `${stats.healthStats.absoluteTotal > 0 ? (stats.healthStats.reported / stats.healthStats.absoluteTotal) * 100 : 0}%` }}
+            ></div>
+          </div>
+          <p className="text-right text-[11px] font-black text-slate-500 uppercase tracking-widest">
+            {stats.healthStats.absoluteTotal > 0 ? Math.round((stats.healthStats.reported / stats.healthStats.absoluteTotal) * 100) : 0}% รายงานผลแล้ว
+          </p>
+        </div>
+
+      </div>
+
+      
       {/* ════════════════════════════════════════════════════════════════════
           COMPACT TABLE — Default: Critical/Warning เท่านั้น
       ════════════════════════════════════════════════════════════════════ */}
