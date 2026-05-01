@@ -626,7 +626,21 @@ export default function DashboardOverview() {
                 </option>
               </select>
             </div>
+            {/* Current Date Badge */}
+            <div className="hidden md:flex items-center gap-1.5 ml-auto bg-white/40 border border-white/60 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+              <span className="text-slate-600 text-[11px] font-semibold whitespace-nowrap">
+                ข้อมูล ณ วันที่
+              </span>
+              <span className="text-slate-900 text-[11px] font-black whitespace-nowrap">
+                {new Date().toLocaleDateString("th-TH", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </span>
+            </div>
           </div>
+        
 
           {/* Bottom Row: Metrics & Pills */}
           <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8 w-full">
