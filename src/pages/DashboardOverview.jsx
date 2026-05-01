@@ -636,7 +636,9 @@ export default function DashboardOverview() {
                 {passedPct}
               </span>
               <div className="pb-2">
-                <span className="text-[2.1rem] font-black text-slate-900">%</span>
+                <span className="text-[2.1rem] font-black text-slate-900">
+                  %
+                </span>
                 <p className="text-slate-900 text-base font-bold uppercase tracking-wider">
                   ภาพรวมการดำเนินงาน
                 </p>
@@ -655,7 +657,9 @@ export default function DashboardOverview() {
                   <span className="text-slate-900 font-black text-xl">
                     {stats.totalKPIs}
                   </span>{" "}
-                  ตัวชี้วัดทั้งหมด
+                </p>
+                <p className="text-slate-900 text-base md:text-lg font-medium tracking-wide">
+                  ตัวชี้วัด
                 </p>
               </div>
             </div>
