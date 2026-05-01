@@ -560,8 +560,8 @@ export default function Dashboard({ categoryFilter }) {
                   x2="100%"
                   y2="100%"
                 >
-                  <stop offset="0%" stopColor="#22d3ee" />
-                  <stop offset="100%" stopColor="#2563eb" />
+                  <stop offset="0%" stopColor="#0cf7f7" />
+                  <stop offset="100%" stopColor="#0df00d" />
                 </linearGradient>
               </defs>
             </svg>

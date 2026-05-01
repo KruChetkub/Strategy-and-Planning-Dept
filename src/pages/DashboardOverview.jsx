@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useVisitorCount } from "../hooks/useVisitorCount";
 import { supabase, withSupabaseTimeout } from "../lib/supabase";
+import { buildPipelineStats, isMeaningfulKpiValue } from "../utils/kpiMetrics";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    DATA FETCHING & HELPERS — ไม่มีการแก้ไข logic ใดๆ ทั้งสิ้น
@@ -474,12 +475,31 @@ export default function DashboardOverview() {
         totalWarning,
         totalAtRisk,
         totalCritical,
+        totalReported:
+          sdgsStats.reported + healthStats.reported,
+        totalAssessed:
+          totalPassed + totalWarning + totalAtRisk + totalCritical,
+        totalPending:
+          Math.max(
+            0,
+            totalKPIs - (sdgsStats.reported + healthStats.reported),
+          ),
         sdgsStats,
         healthStats,
         allIndicators,
       },
     };
   }, [data]);
+
+  const pipelineStats = useMemo(() => {
+    if (!stats) return { total: 0, reported: 0, assessed: 0, pending: 0 };
+    return buildPipelineStats(
+      stats.allIndicators.map((item) => ({
+        reported: isMeaningfulKpiValue(item.performance),
+        assessed: item.status !== "pending",
+      })),
+    );
+  }, [stats]);
 
   const navigate = useNavigate();
   const [showAll, setShowAll] = useState(false);
@@ -520,9 +540,10 @@ export default function DashboardOverview() {
 
   /* ── Derived values (ใช้ข้อมูลจริง) ── */
   const passedPct =
-    stats.totalKPIs > 0
-      ? Math.round((stats.totalPassed / stats.totalKPIs) * 100)
+    stats.totalAssessed > 0
+      ? Math.round((stats.totalPassed / stats.totalAssessed) * 100)
       : 0;
+  // ให้สอดคล้องกับหน้า Dashboard รายระบบ: คิด % จาก "ทั้งหมด" ของระบบนั้น
   const sdgPct =
     stats.sdgsStats.total > 0
       ? Math.round((stats.sdgsStats.passed / stats.sdgsStats.total) * 100)
@@ -552,10 +573,10 @@ export default function DashboardOverview() {
   /* ── Hero gradient based on overall health ── */
   const heroGradient =
     passedPct >= 75
-      ? "from-slate-800 via-slate-700 to-slate-900"
+      ? "from-emerald-100 via-cyan-100 to-blue-200"
       : passedPct >= 50
-        ? "from-slate-800 via-slate-800 to-orange-900"
-        : "from-green-100 via-cyan-100 to-blue-200";
+        ? "from-emerald-100 via-cyan-100 to-blue-200"
+        : "from-emerald-100 via-cyan-100 to-blue-200";
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12 fade-in-up">
@@ -563,34 +584,35 @@ export default function DashboardOverview() {
           HERO SECTION — Big number, status summary
       ════════════════════════════════════════════════════════════════════ */}
       <div
-        className={`relative overflow-hidden bg-gradient-to-r ${heroGradient} rounded-3xl p-8 md:p-10 text-slate-900 shadow-2xl`}
+        className={`relative overflow-hidden bg-gradient-to-r ${heroGradient} rounded-3xl p-8 md:p-10 text-slate-900 shadow-2xl border border-white/60`}
       >
         {/* Background texture */}
-        <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0 opacity-20">
           <div
             className="absolute inset-0"
             style={{
               backgroundImage:
-                "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
-              backgroundSize: "32px 32px",
+                "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.55) 1px, transparent 0)",
+              backgroundSize: "26px 26px",
             }}
           />
         </div>
-        <div className="absolute -right-16 -top-16 w-72 h-72 bg-white/5 rounded-full blur-2xl" />
-        <div className="absolute -left-8 -bottom-8 w-48 h-48 bg-white/5 rounded-full blur-2xl" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-white/40 via-transparent to-white/20" />
+        <div className="absolute -right-16 -top-16 w-72 h-72 bg-blue-300/25 rounded-full blur-3xl" />
+        <div className="absolute -left-8 -bottom-8 w-48 h-48 bg-emerald-200/30 rounded-full blur-3xl" />
 
         <div className="relative z-10 flex flex-col gap-6 w-full">
           {/* Top Row: Title & Filters */}
           <div className="flex flex-wrap items-center gap-4">
-            <p className="text-slate-900 font-black uppercase tracking-widest text-2xl md:text-3xl flex items-center gap-3">
+            <p className="text-slate-900 font-black uppercase tracking-widest text-2xl md:text-3xl flex items-center gap-3 drop-shadow-sm">
               <Target size={32} /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
             </p>
-            <div className="hidden md:block h-5 w-px bg-slate-900/20"></div>
+            <div className="hidden md:block h-5 w-px bg-slate-900/10"></div>
             <div className="flex items-center gap-2">
               <select
                 value={fiscalYear}
                 onChange={(e) => setGlobalFilter(e.target.value, period)}
-                className="bg-white/50 hover:bg-white/80 transition-colors border border-slate-900/10 text-slate-900 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/50 appearance-none cursor-pointer"
+                className="bg-white/80 hover:bg-white transition-colors border border-slate-900/10 text-slate-900 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-slate-400/40 appearance-none cursor-pointer shadow-sm"
               >
                 <option value="All" className="text-slate-800">
                   ทุกปีงบประมาณ
@@ -604,7 +626,7 @@ export default function DashboardOverview() {
               <select
                 value={period}
                 onChange={(e) => setGlobalFilter(fiscalYear, e.target.value)}
-                className="bg-white/50 hover:bg-white/80 transition-colors border border-slate-900/10 text-slate-900 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900/50 appearance-none cursor-pointer"
+                className="bg-white/80 hover:bg-white transition-colors border border-slate-900/10 text-slate-900 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-slate-400/40 appearance-none cursor-pointer shadow-sm"
               >
                 <option value="All" className="text-slate-800">
                   ทุกไตรมาส
@@ -627,7 +649,7 @@ export default function DashboardOverview() {
               </select>
             </div>
             {/* Current Date Badge */}
-            <div className="hidden md:flex items-center gap-1.5 ml-auto bg-white/40 border border-white/60 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+            <div className="hidden md:flex items-center gap-1.5 ml-auto bg-white/55 border border-white/70 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm">
               <span className="text-slate-600 text-[11px] font-semibold whitespace-nowrap">
                 ข้อมูล ณ วันที่
               </span>
@@ -646,14 +668,14 @@ export default function DashboardOverview() {
           <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8 w-full">
             {/* Left: Big Number */}
             <div className="flex items-end gap-4 min-w-max">
-              <span className="text-[5.25rem] md:text-[6rem] font-black tracking-wider tabular-nums leading-none">
+              <span className="text-[5.25rem] md:text-[6rem] font-black tracking-wider tabular-nums leading-none text-slate-950 drop-shadow-sm">
                 {passedPct}
               </span>
               <div className="pb-2">
-                <span className="text-[2.1rem] font-black text-slate-900">
+                <span className="text-[2.1rem] font-black text-slate-900 drop-shadow-sm">
                   %
                 </span>
-                <p className="text-slate-900 text-base font-bold uppercase tracking-wider">
+                <p className="text-slate-900 text-base font-bold uppercase tracking-wider drop-shadow-sm">
                   ภาพรวมการดำเนินงาน
                 </p>
               </div>
@@ -662,18 +684,18 @@ export default function DashboardOverview() {
             {/* Middle: Target Text */}
             <div className="flex-1 flex justify-center text-center">
               <div className="bg-white/60 border border-white/80 px-4 py-4 rounded-2xl shadow-sm backdrop-blur-md">
-                <p className="text-slate-900 text-base md:text-lg font-medium tracking-wide">
+                <p className="text-slate-900 text-base md:text-lg font-medium tracking-wide drop-shadow-sm">
                   บรรลุเป้าหมาย{" "}
-                  <span className="text-slate-900 font-black text-xl">
+                  <span className="text-slate-950 font-black text-xl">
                     {stats.totalPassed}
                   </span>{" "}
                   จาก{" "}
-                  <span className="text-slate-900 font-black text-xl">
-                    {stats.totalKPIs}
+                  <span className="text-slate-950 font-black text-xl">
+                    {stats.totalAssessed}
                   </span>{" "}
                 </p>
-                <p className="text-slate-900 text-base md:text-lg font-medium tracking-wide">
-                  ตัวชี้วัด
+                <p className="text-slate-900 text-base md:text-lg font-medium tracking-wide drop-shadow-sm">
+                  ตัวชี้วัดที่ประเมินได้
                 </p>
               </div>
             </div>
@@ -728,6 +750,42 @@ export default function DashboardOverview() {
               </div>
             </div>
           </div>
+
+          {/* Data coverage summary */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 w-full">
+            <div className="bg-white/80 border border-white/70 rounded-2xl px-4 py-3 shadow-sm backdrop-blur-sm">
+              <p className="text-[14px] font-black uppercase tracking-wider text-slate-500">
+                ตัวชี้วัดทั้งหมด
+              </p>
+              <p className="text-2xl font-black text-slate-950 mt-1 tabular-nums">
+                {stats.totalKPIs}
+              </p>
+            </div>
+            <div className="bg-white/80 border border-white/70 rounded-2xl px-4 py-3 shadow-sm backdrop-blur-sm">
+              <p className="text-[14px] font-black uppercase tracking-wider text-sky-700">
+                มีข้อมูลแล้ว
+              </p>
+              <p className="text-2xl font-black text-slate-950 mt-1 tabular-nums">
+                {pipelineStats.reported}
+              </p>
+            </div>
+            <div className="bg-white/80 border border-white/70 rounded-2xl px-4 py-3 shadow-sm backdrop-blur-sm">
+              <p className="text-[14px] font-black uppercase tracking-wider text-emerald-700">
+                ประเมินผลได้
+              </p>
+              <p className="text-2xl font-black text-slate-950 mt-1 tabular-nums">
+                {pipelineStats.assessed}
+              </p>
+            </div>
+            <div className="bg-white/80 border border-white/70 rounded-2xl px-4 py-3 shadow-sm backdrop-blur-sm">
+              <p className="text-[14px] font-black uppercase tracking-wider text-slate-500">
+                รอข้อมูล
+              </p>
+              <p className="text-2xl font-black text-slate-950 mt-1 tabular-nums">
+                {pipelineStats.pending}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -737,7 +795,7 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 gap-6">
         {/* Urgent Action Panel (Full width) */}
         <div className="bg-white rounded-3xl border border-rose-500 shadow-md overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-rose-50 bg-rose-50/50">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-rose-50 bg-rose-100">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center">
                 <AlertOctagon size={18} className="text-rose-600" />
@@ -1259,7 +1317,7 @@ function VisitorBadge() {
       </div>
       <div className="leading-tight text-left">
         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-violet-500 transition-colors">
-          ดูสถิติเว็บไซต์
+          ดูสถิติเว็บไซต์ (Session)
         </p>
         <div className="flex items-baseline gap-2 mt-0.5">
           <span className="text-base font-black text-slate-800 tabular-nums">

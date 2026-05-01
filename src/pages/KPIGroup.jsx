@@ -6,6 +6,7 @@ import {
   AlertOctagon, XCircle, ChevronLeft, SlidersHorizontal, ArrowUpDown
 } from 'lucide-react';
 import { fetchSDGIndicators, fetchHealthIndicators, evaluateKPIStatus } from '../api/kpiApi';
+import { buildPipelineStats, isMeaningfulKpiValue } from '../utils/kpiMetrics';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    CONFIG
@@ -173,6 +174,15 @@ export default function KPIGroup() {
     return counts;
   }, [kpis]);
 
+  const pipelineStats = useMemo(() => {
+    return buildPipelineStats(
+      kpis.map((kpi) => ({
+        reported: isMeaningfulKpiValue(kpi.performance),
+        assessed: kpi.status !== 'pending',
+      })),
+    );
+  }, [kpis]);
+
   /* ── Filter + Search + Sort ── */
   const displayKPIs = useMemo(() => {
     let result = [...kpis];
@@ -268,7 +278,7 @@ export default function KPIGroup() {
           {/* Overall % badge */}
           <div className="bg-white/10 border border-white/20 backdrop-blur-sm rounded-2xl px-6 py-4 text-center">
             <p className="text-4xl font-black tabular-nums">
-              {kpis.length > 0 ? Math.round((stats.passed_100 / kpis.length) * 100) : 0}
+              {pipelineStats.assessed > 0 ? Math.round((stats.passed_100 / pipelineStats.assessed) * 100) : 0}
             </p>
             <p className="text-white/60 text-[10px] font-bold uppercase tracking-wider mt-1">% ผ่านเป้าหมาย</p>
           </div>
@@ -285,6 +295,25 @@ export default function KPIGroup() {
           bgClass="bg-rose-100" textClass="text-rose-700" borderClass="border-rose-100" />
         <StatCard count={stats.pending} label="รอข้อมูล" Icon={Loader2}
           bgClass="bg-slate-100" textClass="text-slate-500" borderClass="border-slate-200" />
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total KPIs</p>
+          <p className="text-2xl font-black tabular-nums text-slate-800 mt-1">{pipelineStats.total}</p>
+        </div>
+        <div className="bg-white border border-sky-200 rounded-2xl p-4 shadow-sm">
+          <p className="text-[10px] font-black text-sky-700 uppercase tracking-wider">Reported</p>
+          <p className="text-2xl font-black tabular-nums text-slate-800 mt-1">{pipelineStats.reported}</p>
+        </div>
+        <div className="bg-white border border-emerald-200 rounded-2xl p-4 shadow-sm">
+          <p className="text-[10px] font-black text-emerald-700 uppercase tracking-wider">Assessed</p>
+          <p className="text-2xl font-black tabular-nums text-slate-800 mt-1">{pipelineStats.assessed}</p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Pending</p>
+          <p className="text-2xl font-black tabular-nums text-slate-800 mt-1">{pipelineStats.pending}</p>
+        </div>
       </div>
 
       {/* ════════════════════════════════════════════════ FILTER BAR */}

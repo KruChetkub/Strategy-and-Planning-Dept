@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Activity, Loader2, Target, CheckCircle2, XCircle, Save, Link2, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { parseOptionalNumber, trimToNull } from '../utils/kpiForm';
+import KpiDataPolicyNotice from '../components/KpiDataPolicyNotice';
 
 export default function DataEntryHealth() {
   const [loading, setLoading] = useState(false);
@@ -36,19 +38,19 @@ export default function DataEntryHealth() {
       const { error: insertError } = await supabase
         .from('health_indicators')
         .insert([{
-          indicator_name: formData.indicatorName,
-          kpi_group: formData.subIndicatorName,
-          region: formData.region,
-          a_value: parseFloat(formData.A) || 0,
-          b_value: parseFloat(formData.B) || 0,
-          performance: parseFloat(formData.performance) || 0,
-          target_q1: formData.targetQ1,
-          target_q2: formData.targetQ2,
-          target_q3: formData.targetQ3,
-          target_q4: formData.targetQ4,
+          indicator_name: trimToNull(formData.indicatorName),
+          kpi_group: trimToNull(formData.subIndicatorName),
+          region: trimToNull(formData.region),
+          a_value: parseOptionalNumber(formData.A),
+          b_value: parseOptionalNumber(formData.B),
+          performance: parseOptionalNumber(formData.performance),
+          target_q1: trimToNull(formData.targetQ1),
+          target_q2: trimToNull(formData.targetQ2),
+          target_q3: trimToNull(formData.targetQ3),
+          target_q4: trimToNull(formData.targetQ4),
           fiscal_year: formData.fiscalYear,
           period: formData.period,
-          reference_url: formData.referenceUrl?.trim() || null,
+          reference_url: trimToNull(formData.referenceUrl),
         }]);
 
       if (insertError) throw insertError;
@@ -97,7 +99,7 @@ export default function DataEntryHealth() {
 
   // ฟังก์ชันช่วยคำนวณและพรีวิวสถานะเทียบกับเป้าหมาย Q ปัจจุบันอัตโนมัติ
   const evaluatePreview = () => {
-    if (!formData.performance) return null;
+    if (formData.performance === '') return null;
     const perf = parseFloat(formData.performance);
     if (isNaN(perf)) return null;
     
@@ -146,6 +148,8 @@ export default function DataEntryHealth() {
           <p className="text-slate-500 text-sm mt-1 font-medium">บันทึกข้อมูลตัวชี้วัดรายเขตสุขภาพ (Health KPI) ฐานข้อมูลแยก</p>
         </div>
       </div>
+
+      <KpiDataPolicyNotice />
 
       <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-3xl p-8 shadow-xl relative overflow-hidden space-y-8">
         
@@ -243,7 +247,10 @@ export default function DataEntryHealth() {
 
           <div className="space-y-2">
             <label className="block text-sm font-bold text-emerald-700 mb-1.5">ผลงาน (Performance)</label>
-            <input type="number" step="0.01" name="performance" required value={formData.performance} onChange={handleChange} placeholder="ผลงานที่ทำได้" className="w-full bg-emerald-50/50 border border-emerald-300 rounded-lg px-4 py-2.5 outline-none text-slate-900 font-bold focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm"/>
+            <input type="number" step="0.01" name="performance" value={formData.performance} onChange={handleChange} placeholder="ผลงานที่ทำได้ (เว้นว่างได้ถ้ายังไม่มีข้อมูล)" className="w-full bg-emerald-50/50 border border-emerald-300 rounded-lg px-4 py-2.5 outline-none text-slate-900 font-bold focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm"/>
+            <p className="mt-1 text-[11px] font-medium text-slate-500">
+              ถ้ายังไม่มีผลในงวดนี้ ให้ปล่อยว่าง ระบบจะบันทึกเป็น <span className="font-black text-slate-700">null</span>
+            </p>
             {evaluatePreview()}
           </div>
 

@@ -32,6 +32,7 @@ import {
 } from "recharts";
 import ThailandMap from "../components/charts/ThailandMap";
 import { supabase, withSupabaseTimeout } from "../lib/supabase";
+import { buildPipelineStats, isMeaningfulKpiValue } from "../utils/kpiMetrics";
 
 const fetchHealthData = async (year, period) => {
   let query = supabase
@@ -561,6 +562,15 @@ export default function DashboardHealth() {
         allTargets: qTargets,
       };
     }, [dashboardData, currentQ]);
+
+  const pipelineStats = useMemo(() => {
+    return buildPipelineStats(
+      dashboardData.map((item) => ({
+        reported: isMeaningfulKpiValue(item.current_value),
+        assessed: item.status_info.raw !== "pending",
+      })),
+    );
+  }, [dashboardData]);
 
   // 6. Calculate Summaries for ALL Indicators (for Overview Mode)
   const allSummaries = useMemo(() => {
@@ -1334,6 +1344,41 @@ export default function DashboardHealth() {
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white flex items-center justify-center shrink-0 z-10 shadow-md shadow-orange-500/20">
                     <Calendar size={28} />
                   </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
+                  <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                    Total KPIs
+                  </p>
+                  <p className="text-2xl font-black text-slate-950 mt-1 tabular-nums">
+                    {pipelineStats.total}
+                  </p>
+                </div>
+                <div className="bg-white border border-sky-200 rounded-3xl p-4 shadow-sm">
+                  <p className="text-[11px] font-black uppercase tracking-wider text-sky-700">
+                    Reported
+                  </p>
+                  <p className="text-2xl font-black text-slate-950 mt-1 tabular-nums">
+                    {pipelineStats.reported}
+                  </p>
+                </div>
+                <div className="bg-white border border-emerald-200 rounded-3xl p-4 shadow-sm">
+                  <p className="text-[11px] font-black uppercase tracking-wider text-emerald-700">
+                    Assessed
+                  </p>
+                  <p className="text-2xl font-black text-slate-950 mt-1 tabular-nums">
+                    {pipelineStats.assessed}
+                  </p>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
+                  <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                    Pending
+                  </p>
+                  <p className="text-2xl font-black text-slate-950 mt-1 tabular-nums">
+                    {pipelineStats.pending}
+                  </p>
                 </div>
               </div>
 

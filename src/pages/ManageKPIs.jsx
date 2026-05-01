@@ -4,6 +4,8 @@ import {
   AlertTriangle, FileSpreadsheet, Eye, Trash2, Info
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { parseOptionalNumber, trimToNull } from '../utils/kpiForm';
+import KpiDataPolicyNotice from '../components/KpiDataPolicyNotice';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    PARSE EXCEL PASTE → Array of Objects
@@ -30,13 +32,12 @@ function parsePastedData(raw) {
    MAP TO SUPABASE SCHEMA (sdg_indicators table)
 ───────────────────────────────────────────────────────────────────────────── */
 function mapToSupabase(item, fiscalYear, period) {
-  const perf = parseFloat(item.currentPerformance);
   return {
-    category: item.subTarget || null,
+    category: trimToNull(item.subTarget),
     indicator_name: item.indicatorName,
-    target_2030: item.target2030 || null,
-    current_performance: isNaN(perf) ? null : perf,
-    description: item.note || null,
+    target_2030: trimToNull(item.target2030),
+    current_performance: parseOptionalNumber(item.currentPerformance),
+    description: trimToNull(item.note),
     fiscal_year: fiscalYear,
     period: period
   };
@@ -114,6 +115,8 @@ export default function ManageKPIs() {
         </div>
       </div>
 
+      <KpiDataPolicyNotice compact />
+
       {/* ── Result Banner ── */}
       {result && result.error === null && (
         <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl px-6 py-4 shadow-sm">
@@ -138,6 +141,9 @@ export default function ManageKPIs() {
       <div className="bg-violet-50 border border-violet-100 rounded-2xl p-6 space-y-3">
         <p className="font-black text-violet-800 flex items-center gap-2">
           <Info size={16} /> ขั้นตอนการนำเข้าข้อมูล
+        </p>
+        <p className="text-sm text-violet-700 font-medium leading-relaxed">
+          ช่องว่างจะถูกบันทึกเป็น <span className="font-black">null</span> และค่า <span className="font-black">0</span> จะถูกเก็บเป็นค่าจริง
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
           {[

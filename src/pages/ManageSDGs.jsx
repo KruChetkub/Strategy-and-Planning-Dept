@@ -6,6 +6,8 @@ import {
   ChevronsUpDown, ChevronsDownUp, Plus, Link2, ExternalLink
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { parseOptionalNumber, trimToNull } from '../utils/kpiForm';
+import KpiDataPolicyNotice from '../components/KpiDataPolicyNotice';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    HELPERS
@@ -274,12 +276,12 @@ export default function ManageSDGs() {
     setIsSaving(true);
     try {
       const payload = {
-        category:            form.category.trim() || null,
+        category:            trimToNull(form.category),
         indicator_name:      form.indicator_name.trim(),
-        target_2030:         form.target_2030.trim() || null,
-        current_performance: parseFloat(form.current_performance) || null,
-        description:         form.description.trim() || null,
-        reference_url:       form.reference_url?.trim() || null,
+        target_2030:         trimToNull(form.target_2030),
+        current_performance: parseOptionalNumber(form.current_performance),
+        description:         trimToNull(form.description),
+        reference_url:       trimToNull(form.reference_url),
         fiscal_year:         fiscalYear === 'All' ? '2569' : fiscalYear,
         period:              period === 'All' ? 'Year-End' : period,
       };
@@ -379,7 +381,7 @@ export default function ManageSDGs() {
       <div className="relative overflow-hidden bg-gradient-to-r from-violet-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl">
         <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '28px 28px' }} />
         <div className="absolute -right-16 -top-16 w-56 h-56 bg-white/5 rounded-full blur-3xl" />
-        <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+      <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center">
               <Database size={22} />
@@ -404,6 +406,8 @@ export default function ManageSDGs() {
           </div>
         </div>
       </div>
+
+      <KpiDataPolicyNotice compact />
 
       {/* ══ ADD NEW (Global) ══ */}
       {showGlobalAdd && (

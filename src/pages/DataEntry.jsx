@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { FileSpreadsheet, Loader2, CheckCircle, AlertCircle, Link2, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { parseOptionalNumber, trimToNull } from '../utils/kpiForm';
+import KpiDataPolicyNotice from '../components/KpiDataPolicyNotice';
 
 export default function DataEntry() {
   const [loading, setLoading] = useState(false);
@@ -35,13 +37,13 @@ export default function DataEntry() {
         .from('sdg_indicators')
         .insert([{
           indicator_name: formData.indicatorName,
-          category: formData.subTarget,
-          target_2030: formData.target2030,
-          current_performance: parseFloat(formData.currentPerformance) || 0,
-          description: formData.note,
+          category: trimToNull(formData.subTarget),
+          target_2030: trimToNull(formData.target2030),
+          current_performance: parseOptionalNumber(formData.currentPerformance),
+          description: trimToNull(formData.note),
           fiscal_year: formData.fiscalYear,
           period: formData.period,
-          reference_url: formData.referenceUrl?.trim() || null,
+          reference_url: trimToNull(formData.referenceUrl),
           is_deleted: false,
         }]);
 
@@ -91,6 +93,8 @@ export default function DataEntry() {
           </p>
         </div>
       </div>
+
+      <KpiDataPolicyNotice />
 
       {/* FORM */}
       <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm relative overflow-hidden">

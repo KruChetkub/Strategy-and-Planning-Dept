@@ -6,6 +6,8 @@ import {
   ChevronsUpDown, ChevronsDownUp, Plus, MapPin, Link2, ExternalLink
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { parseOptionalNumber, trimToNull } from '../utils/kpiForm';
+import KpiDataPolicyNotice from '../components/KpiDataPolicyNotice';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    REGIONS LIST
@@ -321,16 +323,16 @@ export default function ManageHealth() {
     setIsSaving(true);
     try {
       const payload = {
-        indicator_name: form.indicator_name?.trim() || null,
-        kpi_group:      form.kpi_group?.trim()      || null,
-        region:         form.region?.trim()          || null,
-        a_value:        parseFloat(form.a_value)    || null,
-        b_value:        parseFloat(form.b_value)    || null,
-        performance:    parseFloat(form.performance)|| null,
-        target_q1:      form.target_q1?.trim()      || null,
-        target_q2:      form.target_q2?.trim()      || null,
-        target_q3:      form.target_q3?.trim()      || null,
-        target_q4:      form.target_q4?.trim()      || null,
+        indicator_name: trimToNull(form.indicator_name),
+        kpi_group:      trimToNull(form.kpi_group),
+        region:         trimToNull(form.region),
+        a_value:        parseOptionalNumber(form.a_value),
+        b_value:        parseOptionalNumber(form.b_value),
+        performance:    parseOptionalNumber(form.performance),
+        target_q1:      trimToNull(form.target_q1),
+        target_q2:      trimToNull(form.target_q2),
+        target_q3:      trimToNull(form.target_q3),
+        target_q4:      trimToNull(form.target_q4),
         fiscal_year:    fiscalYear === 'All' ? '2569' : fiscalYear,
         period:         period === 'All' ? 'Q4' : period,
       };
@@ -386,7 +388,7 @@ export default function ManageHealth() {
   const handleSaveLink = async (indName) => {
     setIsSavingLink(true);
     try {
-      const url = linkInput.trim() || null;
+      const url = trimToNull(linkInput);
       if (url) {
         try { new URL(url); } catch {
           addToast('รูปแบบ URL ไม่ถูกต้อง — กรุณาเริ่มด้วย https://', 'error');
@@ -449,7 +451,7 @@ export default function ManageHealth() {
       <div className="relative overflow-hidden bg-gradient-to-r from-emerald-600 to-teal-700 rounded-3xl p-8 text-white shadow-xl">
         <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '28px 28px' }} />
         <div className="absolute -right-16 -top-16 w-56 h-56 bg-white/5 rounded-full blur-3xl" />
-        <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+      <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center">
               <Activity size={22} />
@@ -466,6 +468,8 @@ export default function ManageHealth() {
           </span>
         </div>
       </div>
+
+      <KpiDataPolicyNotice compact />
 
       {/* ══ SEARCH + CONTROLS ══ */}
       <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm flex flex-wrap items-center gap-3">
