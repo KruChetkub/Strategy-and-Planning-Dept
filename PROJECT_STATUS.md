@@ -1,6 +1,6 @@
 # KPI Monitoring System - PROJECT STATUS
 
-อัปเดตล่าสุด: **2026-05-01**
+อัปเดตล่าสุด: **2026-05-26**
 
 > โครงสร้างแบบ production สำหรับใช้เป็นเอกสารกลางในการพัฒนาต่อ และสำหรับเริ่มแชทใหม่โดยไม่เสีย context
 
@@ -73,42 +73,45 @@
 ## 2) CURRENT_STATE
 
 ### 2.1 Last Delivered Changes
-- ปรับต้นน้ำข้อมูลให้รองรับ `null / 0 / ""` อย่างสม่ำเสมอ
-- เพิ่ม helper กลางใน `src/utils/kpiForm.js`
-- เพิ่ม policy notice ในหน้ากรอกและหน้าจัดการข้อมูล
-- ปรับ dashboard หลักให้เริ่มแยก `Total / Reported / Assessed / Pending`
-- ปรับ `DashboardOverview` ให้พื้นหลัง hero ใกล้ภาพแนบของผู้ใช้
+- รีดีไซน์หน้า `DashboardOverview` เป็นโหมดใหม่แบบเลื่อนลงหลาย section (B-H) ตามแผน `plansdgv1.md`
+- เพิ่มโหมดสลับหน้า `view=redesign|classic` เพื่อ fallback หน้าเดิมทันทีโดยไม่กระทบ logic ข้อมูล
+- แยกส่วนหน้าใหม่เป็น component ย่อยเพื่อลดความเสี่ยงโค้ดพังและรองรับการพัฒนาต่อ
+- เพิ่ม Outcome cards (SDGs/Health), coverage summary, ranking, timeline, และ placeholder จังหวัด (Phase 2)
+- ยืนยัน code-level parity ว่าสูตรเมตริกหลักและ routing/query เดิมยังอยู่ครบ
 
 ### 2.2 Current UI State
-- หน้า `DashboardOverview` ใช้พื้นหลังแบบสว่างโทนเขียวอ่อน → ฟ้าอ่อน → น้ำเงินอ่อน
-- หัวข้อใน hero เป็นภาษาไทยและอ่านชัด
-- สี status pills เดิมยังคงอยู่
-- มีแถบสรุปข้อมูล:
-  - ตัวชี้วัดทั้งหมด
-  - มีข้อมูลแล้ว
-  - ประเมินผลได้
-  - รอข้อมูล
+- หน้า `DashboardOverview` มี 2 โหมด:
+  - `classic` = หน้าเดิม
+  - `redesign` = หน้าใหม่ตามโครง SDGs landing
+- โหมด `redesign` มี section นำทางแบบ sticky และลำดับเนื้อหา B-H ครบ
+- Hero โหมดใหม่ปรับโทนเข้ม (immersive) พร้อมคงตัวเลข KPI เดิม
+- บล็อกจังหวัดยังเป็น placeholder (Phase 2) และบล็อก insight/timeline เป็น static content รอบแรก
+- ตารางสรุป KPI และ visitor badge ยังคงอยู่เพื่อคุม continuity
 
 ### 2.3 Current Logic State
 - ฟอร์มบันทึกข้อมูลหลักใช้กติกาเดียวกันแล้ว
 - Bulk import เริ่มใช้ helper เดียวกับฟอร์มปกติ
-- Dashboard หลักเริ่มใช้ `Assessed` เป็นฐานของ % ผ่านเป้าหมาย
-- ยังมี logic บางส่วนใน dashboard เดิมที่ควรตรวจความสอดคล้องต่ออีก
+- `DashboardOverview` ยังคง query เดิม (`fetchAllDashboards`) และ status evaluators เดิม
+- สูตรเมตริกหลักคงเดิม:
+  - `totalKPIs`, `totalPassed`, `totalWarning`, `totalAtRisk`, `totalCritical`
+  - `totalAssessed`, `totalPending`
+  - `% SDGs/% Health` = `passed / total`
+- click routing เดิมยังคงใช้ `indicator=${encodeURIComponent(originalTitle)}`
+- filter `year/period` ยังทำงานผ่าน URL search params เช่นเดิม
+- Visitor counter ปัจจุบันยังเป็น `session-based` (TTL 30 นาที) ไม่ใช่ unique person
+- มีจุดที่ต้องติดตามต่อ: บาง logic ฝั่ง Health ยังตีค่า `0` เป็นไม่มีข้อมูล ซึ่งขัดกับ policy `0 = มีข้อมูลจริง`
 
 ### 2.4 Known Risks / Notes
 - Build validation ใน environment นี้เคยติด `spawn EPERM` ตอนรัน Vite/esbuild
+- UAT บน browser จริงยังต้องปิด checklist ให้ครบก่อน merge
 - ต้องระวังให้ `pending` กับ `assessed` ใช้ความหมายเดียวกันทั้งระบบ
 - ถ้าจะเพิ่ม KPI ชนิดพิเศษ ควรเพิ่ม metadata เช่น `calc_type`
+- ข้อมูล visitor ในฐานปัจจุบันเริ่มตั้งแต่ประมาณ `2026-04-29` (ข้อมูลเก่ากว่านั้นไม่อยู่ใน project/table ที่แอปกำลังอ่าน)
+- เมตริก `ดูสถิติเว็บไซต์ (Session)` = จำนวน session events ใน `visitor_sessions` ไม่ใช่จำนวนผู้ใช้จริงแบบ unique
 
 ### 2.5 Recent Files Touched
-- `src/pages/DataEntry.jsx`
-- `src/pages/DataEntryHealth.jsx`
-- `src/pages/ManageSDGs.jsx`
-- `src/pages/ManageHealth.jsx`
-- `src/pages/ManageKPIs.jsx`
 - `src/pages/DashboardOverview.jsx`
-- `src/pages/DashboardHealth.jsx`
-- `src/pages/KPIGroup.jsx`
+- `plansdgv1.md`
 - `PROJECT_STATUS.md`
 
 ---
@@ -116,15 +119,14 @@
 ## 3) TASK
 
 ### 3.1 In Progress
-- ตรวจให้ logic การนับ `Reported / Assessed / Pending` ใช้คำจำกัดความเดียวกันทั้งระบบ
-- ทำให้หน้ารายงานผู้บริหารอธิบายตัวเลขได้แบบคนอ่านเร็วเข้าใจทันที
+- Final UAT Sign-off ของ `DashboardOverview` (รอกรอกผลจริงใน `plansdgv1.md` หัวข้อ 23)
+- ยืนยัน metric parity และ routing parity บน browser จริงครบ 3 รอบทดสอบ
 
 ### 3.2 Next Priority
-1. ปรับ `DashboardHealth` และ `KPIGroup` ให้สอดคล้องกับ standard ใหม่ทั้งชื่อและตัวเลข
-2. ตรวจว่า dashboard ทุกหน้าไม่ตี `0` เป็นค่าว่าง
-3. ปรับข้อความบนหน้า UI ให้เป็นภาษาไทยทั้งหมดเท่าที่เหมาะสม
-4. เพิ่ม `calc_type` หรือ metadata อื่น ๆ ถ้าพบ KPI ที่ rule ซับซ้อน
-5. เตรียม export/report layer สำหรับผู้บริหารในรอบถัดไป
+1. กรอก UAT Execution Sheet ให้ครบและสรุปผล `PASS/FAIL`
+2. ถ้า PASS: เปลี่ยนสถานะเป็น `Ready to Merge` และดำเนินการ release ตาม flow
+3. ถ้า FAIL: แก้เฉพาะจุดที่ตก checklist แล้ว rerun UAT ทันที
+4. หลังปิดรอบ Overview ค่อยเดินงานถัดไปเรื่อง Health `0` policy alignment
 
 ### 3.3 Validation Checklist
 - KPI ทั้งหมดถูกนับจากทะเบียนกลาง
@@ -133,6 +135,8 @@
 - ช่องว่างถูกบันทึกเป็น `null`
 - ภาพรวมผู้บริหารแสดง Total / Reported / Assessed / Pending ชัดเจน
 - สีสถานะเดิมไม่ถูกเปลี่ยนโดยไม่ตั้งใจ
+- การ์ด SDGs/Health ในหน้า Overview ต้องแสดง % ตรงกับหน้ารายระบบเมื่อใช้ filter เดียวกัน
+- สถิติ `วันนี้` ของ visitor ต้องอิงวันไทย (UTC+7) อย่างสม่ำเสมอ
 
 ### 3.4 Start-New-Chat Prompt
 ใช้ข้อความนี้เมื่อเริ่มคุยใหม่:

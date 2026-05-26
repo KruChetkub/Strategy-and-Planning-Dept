@@ -744,7 +744,7 @@ export default function Dashboard({ categoryFilter }) {
                                 {kpi.category}
                               </p>
                               <p
-                                className="text-[1.1rem] font-bold text-slate-950 leading-relaxed max-w-xl"
+                                className="text-[0.90rem] font-bold text-slate-950 leading-relaxed max-w-xl"
                                 title={kpi.title}
                               >
                                 {kpi.title}

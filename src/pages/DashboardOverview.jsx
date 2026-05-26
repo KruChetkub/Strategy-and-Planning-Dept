@@ -15,7 +15,9 @@ import {
   BarChart2,
   Layers,
   Users,
+  Sparkles,
 } from "lucide-react";
+import { ResponsiveContainer, Treemap, Tooltip } from "recharts";
 import { useVisitorCount } from "../hooks/useVisitorCount";
 import { supabase, withSupabaseTimeout } from "../lib/supabase";
 import { buildPipelineStats, isMeaningfulKpiValue } from "../utils/kpiMetrics";
@@ -198,6 +200,20 @@ const STATUS = {
   },
 };
 
+const extractSdgNumber = (...texts) => {
+  for (const text of texts) {
+    const value = String(text ?? "");
+    const m =
+      value.match(/sdg\s*([0-9]{1,2})/i) ||
+      value.match(/\b([0-9]{1,2})(?:\.[0-9]+)?\b/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n >= 1 && n <= 17) return n;
+    }
+  }
+  return null;
+};
+
 /* ─────────────────────────────────────────────────────────────────────────────
    DONUT CHART — SVG inline, ใช้ข้อมูลจริง
 ───────────────────────────────────────────────────────────────────────────── */
@@ -242,9 +258,23 @@ export default function DashboardOverview() {
   const [searchParams, setSearchParams] = useSearchParams();
   const fiscalYear = searchParams.get("year") || "All";
   const period = searchParams.get("period") || "All";
+  const viewMode = searchParams.get("view") || "redesign";
+  const redesignEnabled = viewMode !== "classic";
 
-  const setGlobalFilter = (y, p) => {
-    setSearchParams({ year: y, period: p });
+  const setGlobalFilter = (y, p, view = viewMode) => {
+    setSearchParams({ year: y, period: p, view });
+  };
+
+  const setViewMode = (nextView) => {
+    setSearchParams({ year: fiscalYear, period, view: nextView });
+  };
+
+  const scrollToOverviewMetrics = () => {
+    const mainEl = document.querySelector("main");
+    const target = document.getElementById("overview-metrics");
+    if (!mainEl || !target) return;
+    const top = Math.max(0, target.offsetTop - 20);
+    mainEl.scrollTo({ top, behavior: "smooth" });
   };
 
   const { data, isLoading, error } = useQuery({
@@ -504,7 +534,156 @@ export default function DashboardOverview() {
   const navigate = useNavigate();
   const [showAll, setShowAll] = useState(false);
 
-  /* ── Loading Skeleton ── */
+  /* ── Derived values (ใช้ข้อมูลจริง) ── */
+  const passedPct =
+    stats?.totalAssessed > 0
+      ? Math.round((stats.totalPassed / stats.totalAssessed) * 100)
+      : 0;
+  // ให้สอดคล้องกับหน้า Dashboard รายระบบ: คิด % จาก "ทั้งหมด" ของระบบนั้น
+  const sdgPct =
+    stats?.sdgsStats?.total > 0
+      ? Math.round((stats.sdgsStats.passed / stats.sdgsStats.total) * 100)
+      : 0;
+  const healthPct =
+    stats?.healthStats?.total > 0
+      ? Math.round((stats.healthStats.passed / stats.healthStats.total) * 100)
+      : 0;
+
+  const urgentItems = (stats?.allIndicators || []).filter(
+    (k) => k.status === "failed_0",
+  );
+  const warningItems = (stats?.allIndicators || []).filter(
+    (k) => k.status === "failed_75" || k.status === "failed_50",
+  );
+  const actionItems = [...urgentItems, ...warningItems];
+
+  const tableItems = showAll
+    ? stats?.allIndicators || []
+    : (stats?.allIndicators || []).filter(
+        (k) =>
+          k.status === "failed_0" ||
+          k.status === "failed_50" ||
+          k.status === "failed_75",
+      );
+
+  const sdgGoalCards = useMemo(() => {
+    if (!stats) {
+      return [];
+    }
+
+    const buckets = new Map();
+
+    stats.allIndicators
+      .filter((item) => item.system === "SDGs")
+      .forEach((item) => {
+        const no = extractSdgNumber(item.title, item.category, item.originalTitle);
+        const key = no ? `sdg-${no}` : "sdg-unknown";
+
+        if (!buckets.has(key)) {
+          buckets.set(key, {
+            no: no || null,
+            title: no ? `SDG ${no}` : "ไม่ระบุเป้าหมาย SDG",
+            sourceLabel:
+              item.category && item.category !== "ไม่ระบุ"
+                ? item.category
+                : item.title || item.originalTitle || "ไม่ระบุ",
+            total: 0,
+            passed: 0,
+            warning: 0,
+            atRisk: 0,
+            critical: 0,
+            pending: 0,
+          });
+        }
+
+        const bucket = buckets.get(key);
+        bucket.total += 1;
+        if (item.status === "passed_100") bucket.passed += 1;
+        else if (item.status === "failed_75") bucket.warning += 1;
+        else if (item.status === "failed_50") bucket.atRisk += 1;
+        else if (item.status === "failed_0") bucket.critical += 1;
+        else bucket.pending += 1;
+      });
+
+    return [...buckets.values()]
+      .map((b) => {
+      const assessed = b.passed + b.warning + b.atRisk + b.critical;
+      const progress = b.total > 0 ? Math.round((b.passed / b.total) * 100) : 0;
+      return { ...b, assessed, progress };
+      })
+      .sort((a, b) => {
+        if (a.no === null && b.no === null) return 0;
+        if (a.no === null) return 1;
+        if (b.no === null) return -1;
+        return a.no - b.no;
+      });
+  }, [stats]);
+
+  const performanceRanking = useMemo(() => {
+    if (!stats) return { best: [], worst: [] };
+
+    const assessedItems = stats.allIndicators
+      .filter((item) => item.status !== "pending")
+      .map((item) => ({
+        ...item,
+        score:
+          item.status === "passed_100"
+            ? 100
+            : item.status === "failed_75"
+              ? 75
+              : item.status === "failed_50"
+                ? 50
+                : 0,
+      }));
+
+    const best = [...assessedItems].sort((a, b) => b.score - a.score).slice(0, 3);
+    const worst = [...assessedItems].sort((a, b) => a.score - b.score).slice(0, 3);
+    return { best, worst };
+  }, [stats]);
+
+  const coverageByCategory = useMemo(() => {
+    if (!stats) return [];
+
+    const map = new Map();
+    stats.allIndicators.forEach((item) => {
+      const key = item.category || "ไม่ระบุ";
+      const prev = map.get(key) || 0;
+      map.set(key, prev + 1);
+    });
+    return [...map.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+  }, [stats]);
+
+  const yearlyVolume = useMemo(() => {
+    const years = new Map();
+    const seedYears = ["2567", "2568", "2569", "2570"];
+    seedYears.forEach((y) => years.set(y, 0));
+    if (data) {
+      const [sdgsRaw, healthRaw] = data;
+      [...sdgsRaw, ...healthRaw].forEach((row) => {
+        const y = String(row.fiscal_year ?? "");
+        if (!y) return;
+        years.set(y, (years.get(y) || 0) + 1);
+      });
+    }
+    return [...years.entries()]
+      .map(([year, count]) => ({ year, count }))
+      .sort((a, b) => a.year.localeCompare(b.year));
+  }, [data]);
+
+  /* ── Hero gradient based on overall health ── */
+  const heroGradient =
+    redesignEnabled
+      ? "from-[#031434] via-[#0b2a5a] to-[#123b78]"
+      : passedPct >= 75
+        ? "from-emerald-100 via-cyan-100 to-blue-200"
+        : passedPct >= 50
+          ? "from-emerald-100 via-cyan-100 to-blue-200"
+          : "from-emerald-100 via-cyan-100 to-blue-200";
+
+  /* ── Loading/Error returns after all hooks (important for hook order) ── */
   if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto space-y-6 pb-12 animate-pulse">
@@ -538,56 +717,54 @@ export default function DashboardOverview() {
     );
   }
 
-  /* ── Derived values (ใช้ข้อมูลจริง) ── */
-  const passedPct =
-    stats.totalAssessed > 0
-      ? Math.round((stats.totalPassed / stats.totalAssessed) * 100)
-      : 0;
-  // ให้สอดคล้องกับหน้า Dashboard รายระบบ: คิด % จาก "ทั้งหมด" ของระบบนั้น
-  const sdgPct =
-    stats.sdgsStats.total > 0
-      ? Math.round((stats.sdgsStats.passed / stats.sdgsStats.total) * 100)
-      : 0;
-  const healthPct =
-    stats.healthStats.total > 0
-      ? Math.round((stats.healthStats.passed / stats.healthStats.total) * 100)
-      : 0;
-
-  const urgentItems = stats.allIndicators.filter(
-    (k) => k.status === "failed_0",
-  );
-  const warningItems = stats.allIndicators.filter(
-    (k) => k.status === "failed_75" || k.status === "failed_50",
-  );
-  const actionItems = [...urgentItems, ...warningItems];
-
-  const tableItems = showAll
-    ? stats.allIndicators
-    : stats.allIndicators.filter(
-        (k) =>
-          k.status === "failed_0" ||
-          k.status === "failed_50" ||
-          k.status === "failed_75",
-      );
-
-  /* ── Hero gradient based on overall health ── */
-  const heroGradient =
-    passedPct >= 75
-      ? "from-emerald-100 via-cyan-100 to-blue-200"
-      : passedPct >= 50
-        ? "from-emerald-100 via-cyan-100 to-blue-200"
-        : "from-emerald-100 via-cyan-100 to-blue-200";
-
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-12 fade-in-up">
+    <div className="space-y-6 pb-12 fade-in-up scroll-smooth mt-0">
+      {redesignEnabled && (
+        <section className="relative min-h-[calc(100vh-4rem)] w-screen ml-[calc(50%-50vw)] overflow-hidden">
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(1000px 420px at 70% 55%, rgba(34,197,94,0.28), transparent 60%), linear-gradient(120deg, #041737 0%, #0b2b59 55%, #143f7b 100%)",
+            }}
+          />
+          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.45) 1px, transparent 0)", backgroundSize: "24px 24px" }} />
+          <div className="relative z-10 h-full min-h-[78vh] flex items-center justify-center px-6">
+            <div className="text-center max-w-3xl">
+              <p className="inline-flex items-center rounded-full border border-white/35 bg-white/10 px-8 py-2.5 text-xxs font-black text-white/90">
+                DASH BOARD
+              </p>
+              <h1 className="mt-6 text-4xl md:text-6xl font-black text-white leading-[1.2]">
+                <span className="block">ผลการดำเนินงาน</span>
+                <span className="block h-6 md:h-8" aria-hidden="true" />
+                <span className="block">ตามตัวชี้วัดสำคัญ</span>
+              </h1>
+              <p className="mt-4 text-sm md:text-base text-slate-200">
+                กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
+              </p>
+              <button
+                type="button"
+                onClick={scrollToOverviewMetrics}
+                className="inline-block mt-8 px-7 py-3 rounded-2xl bg-sky-500 hover:bg-sky-400 text-white font-black text-sm transition-colors"
+              >
+                ดูข้อมูล
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      <div className="max-w-7xl mx-auto space-y-6">
+
       {/* ════════════════════════════════════════════════════════════════════
           HERO SECTION — Big number, status summary
       ════════════════════════════════════════════════════════════════════ */}
       <div
+        id="overview-metrics"
         className={`relative overflow-hidden bg-gradient-to-r ${heroGradient} rounded-3xl p-8 md:p-10 text-slate-900 shadow-2xl border border-white/60`}
       >
         {/* Background texture */}
-        <div className="absolute inset-0 opacity-20">
+        <div className={`absolute inset-0 ${redesignEnabled ? "opacity-35" : "opacity-20"}`}>
           <div
             className="absolute inset-0"
             style={{
@@ -597,14 +774,22 @@ export default function DashboardOverview() {
             }}
           />
         </div>
-        <div className="absolute inset-0 bg-gradient-to-tr from-white/40 via-transparent to-white/20" />
-        <div className="absolute -right-16 -top-16 w-72 h-72 bg-blue-300/25 rounded-full blur-3xl" />
-        <div className="absolute -left-8 -bottom-8 w-48 h-48 bg-emerald-200/30 rounded-full blur-3xl" />
+        <div
+          className={`absolute inset-0 ${redesignEnabled ? "bg-gradient-to-tr from-slate-950/45 via-transparent to-cyan-950/20" : "bg-gradient-to-tr from-white/40 via-transparent to-white/20"}`}
+        />
+        <div
+          className={`absolute -right-16 -top-16 w-72 h-72 rounded-full blur-3xl ${redesignEnabled ? "bg-cyan-400/20" : "bg-blue-300/25"}`}
+        />
+        <div
+          className={`absolute -left-8 -bottom-8 w-48 h-48 rounded-full blur-3xl ${redesignEnabled ? "bg-emerald-300/20" : "bg-emerald-200/30"}`}
+        />
 
         <div className="relative z-10 flex flex-col gap-6 w-full">
           {/* Top Row: Title & Filters */}
           <div className="flex flex-wrap items-center gap-4">
-            <p className="text-slate-900 font-black uppercase tracking-widest text-2xl md:text-3xl flex items-center gap-3 drop-shadow-sm">
+            <p
+              className={`font-black uppercase tracking-widest text-2xl md:text-3xl flex items-center gap-3 drop-shadow-sm ${redesignEnabled ? "text-white" : "text-slate-900"}`}
+            >
               <Target size={32} /> กองยุทธศาสตร์และแผนงาน กรมควบคุมโรค
             </p>
             <div className="hidden md:block h-5 w-px bg-slate-900/10"></div>
@@ -612,7 +797,7 @@ export default function DashboardOverview() {
               <select
                 value={fiscalYear}
                 onChange={(e) => setGlobalFilter(e.target.value, period)}
-                className="bg-white/80 hover:bg-white transition-colors border border-slate-900/10 text-slate-900 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-slate-400/40 appearance-none cursor-pointer shadow-sm"
+                className={`transition-colors rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 appearance-none cursor-pointer shadow-sm ${redesignEnabled ? "bg-white/95 hover:bg-white border border-white/30 text-slate-900 focus:ring-sky-300/50" : "bg-white/80 hover:bg-white border border-slate-900/10 text-slate-900 focus:ring-slate-400/40"}`}
               >
                 <option value="All" className="text-slate-800">
                   ทุกปีงบประมาณ
@@ -626,7 +811,7 @@ export default function DashboardOverview() {
               <select
                 value={period}
                 onChange={(e) => setGlobalFilter(fiscalYear, e.target.value)}
-                className="bg-white/80 hover:bg-white transition-colors border border-slate-900/10 text-slate-900 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-slate-400/40 appearance-none cursor-pointer shadow-sm"
+                className={`transition-colors rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 appearance-none cursor-pointer shadow-sm ${redesignEnabled ? "bg-white/95 hover:bg-white border border-white/30 text-slate-900 focus:ring-sky-300/50" : "bg-white/80 hover:bg-white border border-slate-900/10 text-slate-900 focus:ring-slate-400/40"}`}
               >
                 <option value="All" className="text-slate-800">
                   ทุกไตรมาส
@@ -648,12 +833,32 @@ export default function DashboardOverview() {
                 </option>
               </select>
             </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setViewMode("redesign")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black border transition-colors ${redesignEnabled ? "bg-white text-slate-900 border-white" : "bg-white/80 text-slate-700 border-slate-200 hover:bg-white"}`}
+              >
+                หน้าใหม่
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("classic")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black border transition-colors ${!redesignEnabled ? "bg-slate-900 text-white border-slate-900" : "bg-white/80 text-slate-700 border-slate-200 hover:bg-white"}`}
+              >
+                หน้าเดิม
+              </button>
+            </div>
             {/* Current Date Badge */}
-            <div className="hidden md:flex items-center gap-1.5 ml-auto bg-white/55 border border-white/70 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm">
-              <span className="text-slate-600 text-[11px] font-semibold whitespace-nowrap">
+            <div
+              className={`hidden md:flex items-center gap-1.5 ml-auto backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm ${redesignEnabled ? "bg-white/20 border border-white/20" : "bg-white/55 border border-white/70"}`}
+            >
+              <span className={`text-[11px] font-semibold whitespace-nowrap ${redesignEnabled ? "text-slate-100" : "text-slate-600"}`}>
                 ข้อมูล ณ วันที่
               </span>
-              <span className="text-slate-900 text-[11px] font-black whitespace-nowrap">
+              <span
+                className={`text-[11px] font-black whitespace-nowrap ${redesignEnabled ? "text-white" : "text-slate-900"}`}
+              >
                 {new Date().toLocaleDateString("th-TH", {
                   day: "numeric",
                   month: "long",
@@ -668,14 +873,16 @@ export default function DashboardOverview() {
           <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8 w-full">
             {/* Left: Big Number */}
             <div className="flex items-end gap-4 min-w-max">
-              <span className="text-[5.25rem] md:text-[6rem] font-black tracking-wider tabular-nums leading-none text-slate-950 drop-shadow-sm">
+              <span className="text-[5.25rem] md:text-[6rem] font-black tracking-wider tabular-nums leading-none text-white drop-shadow-sm">
                 {passedPct}
               </span>
               <div className="pb-2">
-                <span className="text-[2.1rem] font-black text-slate-900 drop-shadow-sm">
+                <span className={`text-[2.1rem] font-black drop-shadow-sm ${redesignEnabled ? "text-white" : "text-slate-900"}`}>
                   %
                 </span>
-                <p className="text-slate-900 text-base font-bold uppercase tracking-wider drop-shadow-sm">
+                <p
+                  className={`text-base font-bold uppercase tracking-wider drop-shadow-sm ${redesignEnabled ? "text-slate-100" : "text-slate-900"}`}
+                >
                   ภาพรวมการดำเนินงาน
                 </p>
               </div>
@@ -683,18 +890,28 @@ export default function DashboardOverview() {
 
             {/* Middle: Target Text */}
             <div className="flex-1 flex justify-center text-center">
-              <div className="bg-white/60 border border-white/80 px-4 py-4 rounded-2xl shadow-sm backdrop-blur-md">
-                <p className="text-slate-900 text-base md:text-lg font-medium tracking-wide drop-shadow-sm">
+              <div
+                className={`px-4 py-4 rounded-2xl shadow-sm backdrop-blur-md ${redesignEnabled ? "bg-white/20 border border-white/20" : "bg-white/60 border border-white/80"}`}
+              >
+                <p
+                  className={`text-base md:text-lg font-medium tracking-wide drop-shadow-sm ${redesignEnabled ? "text-white" : "text-slate-900"}`}
+                >
                   บรรลุเป้าหมาย{" "}
-                  <span className="text-slate-950 font-black text-xl">
+                  <span
+                    className={`font-black text-xl ${redesignEnabled ? "text-white" : "text-slate-950"}`}
+                  >
                     {stats.totalPassed}
                   </span>{" "}
                   จาก{" "}
-                  <span className="text-slate-950 font-black text-xl">
+                  <span
+                    className={`font-black text-xl ${redesignEnabled ? "text-white" : "text-slate-950"}`}
+                  >
                     {stats.totalAssessed}
                   </span>{" "}
                 </p>
-                <p className="text-slate-900 text-base md:text-lg font-medium tracking-wide drop-shadow-sm">
+                <p
+                  className={`text-base md:text-lg font-medium tracking-wide drop-shadow-sm ${redesignEnabled ? "text-slate-100" : "text-slate-900"}`}
+                >
                   ตัวชี้วัดที่ประเมินได้
                 </p>
               </div>
@@ -789,9 +1006,37 @@ export default function DashboardOverview() {
         </div>
       </div>
 
+      {redesignEnabled && (
+        <>
+          <SdgGoalsGridSection sdgGoalCards={sdgGoalCards} />
+          <OutcomeSystemCardsSection
+            sdgPct={sdgPct}
+            healthPct={healthPct}
+            sdgsStats={stats.sdgsStats}
+            healthStats={stats.healthStats}
+            navigate={navigate}
+          />
+          <PerformanceSummarySection
+            passedPct={passedPct}
+            performanceRanking={performanceRanking}
+            navigate={navigate}
+          />
+          <CoverageInsightSection
+            coverageByCategory={coverageByCategory}
+            yearlyVolume={yearlyVolume}
+          />
+          <SdgStatusDistributionSection sdgGoalCards={sdgGoalCards} />
+          <ProvincePlaceholderSection />
+          <InsightCardsSection />
+          <RoadTo2030TimelineSection />
+        </>
+      )}
+
       {/* ════════════════════════════════════════════════════════════════════
           BENTO ROW 1 — Urgent Panel
       ════════════════════════════════════════════════════════════════════ */}
+      {!redesignEnabled && (
+        <>
       <div className="grid grid-cols-1 gap-6">
         {/* Urgent Action Panel (Full width) */}
         <div className="bg-white rounded-3xl border border-rose-500 shadow-md overflow-hidden">
@@ -893,7 +1138,7 @@ export default function DashboardOverview() {
       ════════════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* SDGs Card */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-6 hover:shadow-lg transition-all hover:border-sky-200 group">
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-6 hover:shadow-lg transition-all hover:border-sky-600 group">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center">
@@ -987,7 +1232,7 @@ export default function DashboardOverview() {
         </div>
 
         {/* Health KPI Card */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-6 hover:shadow-lg transition-all hover:border-emerald-200 group">
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-6 hover:shadow-lg transition-all hover:border-emerald-600 group">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
@@ -1170,6 +1415,8 @@ export default function DashboardOverview() {
           </p>
         </div>
       </div>
+        </>
+      )}
 
       {/* ════════════════════════════════════════════════════════════════════
           COMPACT TABLE — Default: Critical/Warning เท่านั้น
@@ -1300,6 +1547,7 @@ export default function DashboardOverview() {
           <VisitorBadge />
         </div>
       </div>
+      </div>
     </div>
   );
 }
@@ -1329,5 +1577,478 @@ function VisitorBadge() {
         </div>
       </div>
     </div>
+  );
+}
+
+function SdgGoalsGridSection({ sdgGoalCards }) {
+  return (
+    <section
+      id="goals"
+      className="scroll-mt-20 bg-white/90 border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm"
+    >
+      <p className="text-xs font-black uppercase tracking-[0.25em] text-sky-700">
+        เป้าหมาย SDGs
+      </p>
+      <h2 className="mt-2 text-2xl md:text-3xl font-black text-slate-950">
+        {sdgGoalCards.length || 0} เป้าหมายจากข้อมูลในระบบ
+      </h2>
+      <p className="mt-2 text-sm text-slate-600">
+        นับจากข้อมูล SDG ที่มีจริงตามตัวกรองปีงบประมาณและไตรมาสที่เลือก
+      </p>
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {sdgGoalCards.length === 0 && (
+          <div className="col-span-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+            <p className="text-sm font-bold text-slate-600">
+              ยังไม่มีข้อมูลเป้าหมาย SDG สำหรับตัวกรองที่เลือก
+            </p>
+          </div>
+        )}
+        {sdgGoalCards.map((goal) => (
+          <article
+            key={goal.no ?? goal.title}
+            className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs font-black uppercase tracking-wider text-slate-500">
+                {goal.no ? `SDG ${goal.no}` : "UNMAPPED"}
+              </p>
+              <p className="text-lg font-black tabular-nums text-slate-800">
+                {goal.progress}%
+              </p>
+            </div>
+            <p className="mt-1 text-sm font-bold text-slate-900 leading-tight min-h-10">
+              {goal.sourceLabel}
+            </p>
+            <div className="mt-3 h-2 rounded-full bg-slate-200 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-sky-500"
+                style={{ width: `${goal.progress}%` }}
+              />
+            </div>
+            <p className="mt-2 text-[11px] font-bold text-slate-500">
+              {goal.total > 0
+                ? `${goal.passed}/${goal.total} ผ่านเป้า`
+                : "ยังไม่มีข้อมูลที่ map ได้"}
+            </p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PerformanceSummarySection({ passedPct, performanceRanking, navigate }) {
+  return (
+    <section id="summary" className="scroll-mt-20 grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col items-center justify-center">
+        <div className="relative w-40 h-40 flex items-center justify-center">
+          <DonutRing percent={passedPct} color="#16a34a" size={160} stroke={12} />
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+            <p className="text-4xl font-black text-emerald-700 leading-none">
+              {passedPct}%
+            </p>
+          </div>
+        </div>
+        <div className="text-center mt-2">
+          <p className="text-xs font-bold text-slate-500">
+            บรรลุเป้าหมายจาก KPI ที่ประเมินผลได้
+          </p>
+        </div>
+      </div>
+      <div className="xl:col-span-2 grid grid-cols-1 gap-4">
+        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
+          <p className="text-sm font-black text-emerald-800 mb-2">
+            3 อันดับที่มีผลการดำเนินงานดีที่สุด
+          </p>
+          <div className="space-y-2">
+            {performanceRanking.best.length === 0 ? (
+              <p className="text-xs font-bold text-slate-500">ยังไม่มี KPI ที่ประเมินผลได้</p>
+            ) : (
+              performanceRanking.best.map((item, i) => (
+                <button
+                  key={`best-${item.id}-${i}`}
+                  onClick={() =>
+                    navigate(
+                      `/${item.system === "SDGs" ? "sdgs" : "healthkpi"}?indicator=${encodeURIComponent(item.originalTitle)}`,
+                    )
+                  }
+                  className="w-full text-left bg-white rounded-xl px-3 py-2 border border-emerald-100 hover:border-emerald-300"
+                >
+                  <p className="text-sm font-bold text-slate-900 truncate">
+                    {item.title}
+                  </p>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+        <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4">
+          <p className="text-sm font-black text-orange-800 mb-2">
+            3 อันดับที่ต้องเร่งดำเนินการที่สุด
+          </p>
+          <div className="space-y-2">
+            {performanceRanking.worst.length === 0 ? (
+              <p className="text-xs font-bold text-slate-500">ยังไม่มี KPI ที่ประเมินผลได้</p>
+            ) : (
+              performanceRanking.worst.map((item, i) => (
+                <button
+                  key={`worst-${item.id}-${i}`}
+                  onClick={() =>
+                    navigate(
+                      `/${item.system === "SDGs" ? "sdgs" : "healthkpi"}?indicator=${encodeURIComponent(item.originalTitle)}`,
+                    )
+                  }
+                  className="w-full text-left bg-white rounded-xl px-3 py-2 border border-orange-100 hover:border-orange-300"
+                >
+                  <p className="text-sm font-bold text-slate-900 truncate">
+                    {item.title}
+                  </p>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function OutcomeSystemCardsSection({
+  sdgPct,
+  healthPct,
+  sdgsStats,
+  healthStats,
+  navigate,
+}) {
+  return (
+    <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center">
+              <Layers size={18} className="text-sky-600" />
+            </div>
+            <div>
+              <p className="text-sm font-black uppercase tracking-widest text-sky-700">
+                Outcome
+              </p>
+              <h3 className="text-base font-black text-slate-950">ภาพรวม SDGs</h3>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate("/sdgs")}
+            className="text-xs font-black text-sky-700 hover:text-sky-900"
+          >
+            ดูรายละเอียด
+          </button>
+        </div>
+        <div className="mt-5 flex items-center gap-5">
+          <div className="relative flex-shrink-0">
+            <DonutRing percent={sdgPct} color="#0ea5e9" size={96} stroke={10} />
+            <div className="absolute inset-0 flex items-center justify-center text-lg font-black text-slate-900">
+              {sdgPct}%
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 flex-1">
+            {[
+              { label: "ทั้งหมด", value: sdgsStats.total },
+              { label: "บรรลุ", value: sdgsStats.passed },
+              { label: "เฝ้าระวัง", value: sdgsStats.warning },
+              { label: "วิกฤติ", value: sdgsStats.critical },
+            ].map((i) => (
+              <div key={i.label} className="rounded-xl bg-slate-50 px-3 py-2">
+                <p className="text-lg font-black text-slate-900 tabular-nums">{i.value}</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  {i.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <BarChart2 size={18} className="text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm font-black uppercase tracking-widest text-emerald-700">
+                Outcome
+              </p>
+              <h3 className="text-base font-black text-slate-950">ภาพรวม Health KPI</h3>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate("/healthkpi")}
+            className="text-xs font-black text-emerald-700 hover:text-emerald-900"
+          >
+            ดูรายละเอียด
+          </button>
+        </div>
+        <div className="mt-5 flex items-center gap-5">
+          <div className="relative flex-shrink-0">
+            <DonutRing percent={healthPct} color="#10b981" size={96} stroke={10} />
+            <div className="absolute inset-0 flex items-center justify-center text-lg font-black text-slate-900">
+              {healthPct}%
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 flex-1">
+            {[
+              { label: "ทั้งหมด", value: healthStats.total },
+              { label: "บรรลุ", value: healthStats.passed },
+              { label: "เฝ้าระวัง", value: healthStats.warning },
+              { label: "วิกฤติ", value: healthStats.critical },
+            ].map((i) => (
+              <div key={i.label} className="rounded-xl bg-slate-50 px-3 py-2">
+                <p className="text-lg font-black text-slate-900 tabular-nums">{i.value}</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  {i.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CoverageInsightSection({ coverageByCategory, yearlyVolume }) {
+  const [hoveredKey, setHoveredKey] = useState(null);
+  const totalCoverage = Math.max(
+    1,
+    coverageByCategory.reduce((sum, item) => sum + item.count, 0),
+  );
+  const maxYearly = Math.max(1, ...yearlyVolume.map((i) => i.count));
+  const treemapData = coverageByCategory.map((item) => ({
+    name: item.name,
+    size: item.count,
+  }));
+  const treemapColors = [
+    "#1d4ed8",
+    "#0f766e",
+    "#be123c",
+    "#dc2626",
+    "#0369a1",
+    "#ca8a04",
+    "#16a34a",
+    "#9333ea",
+    "#ea580c",
+    "#475569",
+  ];
+
+  const TreemapCell = (props) => {
+    const { x, y, width, height, index, name, size } = props;
+    if (width < 24 || height < 20) return null;
+
+    const isTiny = width < 120 || height < 62;
+    const isSmall = width < 200 || height < 96;
+    const labelMax =
+      width > 280 ? 44 : width > 220 ? 30 : width > 160 ? 20 : width > 120 ? 14 : 0;
+    const shortName =
+      labelMax > 0 && String(name).length > labelMax
+        ? `${String(name).slice(0, labelMax)}...`
+        : String(name);
+
+    const cellKey = `${name}-${size}`;
+    const isHovered = hoveredKey === cellKey;
+
+    return (
+      <g
+        onMouseEnter={() => setHoveredKey(cellKey)}
+        onMouseLeave={() => setHoveredKey(null)}
+      >
+        <rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          style={{
+            fill: treemapColors[index % treemapColors.length],
+            stroke: "#ffffff",
+            strokeWidth: 1.5,
+            opacity: isHovered ? 0.92 : 1,
+          }}
+        />
+        {!isTiny && (
+          <text
+            x={x + width / 2}
+            y={y + height / 2 - 2}
+            textAnchor="middle"
+            fill="rgba(255,255,255,0.9)"
+            fontSize={isHovered ? (isSmall ? 9 : 11) : (isSmall ? 8 : 10)}
+            fontWeight={isHovered ? 700 : 500}
+            style={{ fontFamily: "inherit" }}
+          >
+            {shortName}
+          </text>
+        )}
+        <text
+          x={x + width / 2}
+          y={isTiny ? y + height / 2 + 5 : y + height / 2 + 15}
+          textAnchor="middle"
+          fill="rgba(241,245,249,0.96)"
+          fontSize={isHovered ? (isSmall ? 10 : 11) : (isSmall ? 9 : 10)}
+          fontWeight={isHovered ? 700 : 600}
+          style={{ fontFamily: "inherit" }}
+        >
+          {size}
+        </text>
+      </g>
+    );
+  };
+
+  return (
+    <section id="coverage" className="scroll-mt-20 grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <Activity size={16} className="text-sky-600" />
+          <h3 className="text-lg font-black text-slate-900">
+            ข้อมูลที่เรามีครอบคลุมแค่ไหน?
+          </h3>
+        </div>
+        <div className="h-[360px] rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-6 flex items-center justify-center text-center">
+          <p className="text-sm font-bold text-slate-500">
+            ปิดการแสดงผลส่วนนี้ชั่วคราว
+          </p>
+        </div>
+      </div>
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp size={16} className="text-emerald-600" />
+          <h3 className="text-lg font-black text-slate-900">
+            ข้อมูลเพิ่มขึ้นมากน้อยแค่ไหน?
+          </h3>
+        </div>
+        <div className="space-y-3">
+          {yearlyVolume.map((y) => (
+            <div key={y.year}>
+              <div className="flex items-center justify-between text-xs font-bold text-slate-600 mb-1">
+                <span>ปี {y.year}</span>
+                <span>{y.count}</span>
+              </div>
+              <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-500"
+                  style={{ width: `${(y.count / maxYearly) * 100}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SdgStatusDistributionSection({ sdgGoalCards }) {
+  return (
+    <section
+      id="distribution"
+      className="scroll-mt-20 bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm"
+    >
+      <div className="flex items-center gap-2">
+        <Sparkles size={16} className="text-sky-600" />
+        <h2 className="text-xl md:text-2xl font-black text-slate-950">
+          แต่ละ SDG น่าเชื่อถือได้ระดับใด?
+        </h2>
+      </div>
+      <div className="mt-5 space-y-3">
+        {sdgGoalCards.map((goal) => {
+          const total = Math.max(1, goal.total);
+          const parts = [
+            { key: "passed", val: goal.passed, cls: "bg-emerald-500" },
+            { key: "warning", val: goal.warning, cls: "bg-amber-400" },
+            { key: "risk", val: goal.atRisk + goal.critical, cls: "bg-rose-500" },
+            { key: "pending", val: goal.pending, cls: "bg-slate-300" },
+          ];
+          return (
+            <div
+              key={`dist-${goal.no ?? goal.sourceLabel ?? goal.title}`}
+              className="grid grid-cols-12 items-center gap-3"
+            >
+              <p className="col-span-12 sm:col-span-3 text-xs font-bold text-slate-700">
+                {goal.no ? `SDG ${goal.no}` : "UNMAPPED"} {goal.sourceLabel || goal.title}
+              </p>
+              <div className="col-span-12 sm:col-span-9 h-3 rounded-full bg-slate-100 overflow-hidden flex">
+                {parts.map((part) => (
+                  <div
+                    key={part.key}
+                    className={part.cls}
+                    style={{ width: `${(part.val / total) * 100}%` }}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function ProvincePlaceholderSection() {
+  return (
+    <section
+      id="province"
+      className="scroll-mt-20 bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm"
+    >
+      <div className="flex items-center gap-2">
+        <Sparkles size={16} className="text-amber-600" />
+        <h2 className="text-xl md:text-2xl font-black text-slate-950">
+          จังหวัดไหนนำหน้า?
+        </h2>
+      </div>
+      <p className="text-sm text-slate-600 mt-2">
+        กำลังเตรียมข้อมูลระดับจังหวัด ส่วนนี้จะเปิดใช้งานเมื่อโครงสร้างข้อมูลพร้อม
+      </p>
+      <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+        <p className="text-sm font-bold text-slate-500">
+          Phase 2: Province Map (Coming Soon)
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function InsightCardsSection() {
+  return (
+    <section
+      id="insights"
+      className="scroll-mt-20 bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm"
+    >
+      <h2 className="text-2xl font-black text-slate-950">บทประชาสัมพันธ์</h2>
+      <p className="text-sm text-slate-600 mt-1">
+        เกาะติดความเคลื่อนไหวล่าสุดของ SDGs ในประเทศไทย
+      </p>
+      <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-8 text-center">
+        <p className="text-sm font-black text-slate-600">ยังไม่มีข้อมูลบทประชาสัมพันธ์</p>
+        <p className="text-xs text-slate-500 mt-1">
+          ส่วนนี้จะเปิดใช้งานเมื่อมีแหล่งข้อมูลข่าว/ประกาศอย่างเป็นทางการ
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function RoadTo2030TimelineSection() {
+  return (
+    <section
+      id="timeline"
+      className="scroll-mt-20 bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm"
+    >
+      <h2 className="text-2xl font-black text-slate-950">เส้นทางสู่ปี 2573</h2>
+      <p className="text-sm text-slate-600 mt-1">
+        ไทม์ไลน์เหตุการณ์สำคัญของการขับเคลื่อน SDGs ในประเทศไทย
+      </p>
+      <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-8 text-center">
+        <p className="text-sm font-black text-slate-600">ยังไม่มีข้อมูลเส้นทางสู่ปี 2573</p>
+        <p className="text-xs text-slate-500 mt-1">
+          ส่วนนี้จะเปิดใช้งานเมื่อมีรายการเหตุการณ์ที่ยืนยันอย่างเป็นทางการ
+        </p>
+      </div>
+    </section>
   );
 }
