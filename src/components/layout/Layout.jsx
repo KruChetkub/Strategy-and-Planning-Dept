@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import kpiSystemLogo from '../../assets/logoCopyDsp.png';
 
 export default function Layout() {
-  const { isAuthenticated, signOut } = useAuth();
+  const { isAuthenticated, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   // เริ่มต้นให้เปิดบนหน้าจอใหญ่ และปิดบนจอมือถือ
   const [isOpen, setIsOpen] = useState(window.innerWidth >= 1024);
@@ -27,6 +27,12 @@ export default function Layout() {
     { label: 'สรุปผล (รวม)', path: '/' },
     { label: 'ตัวชี้วัด SDGs', path: '/sdgs' },
     { label: 'Health KPI', path: '/healthkpi' },
+  ];
+  const adminTopTabs = [
+    { label: 'บันทึก SDGs', path: '/entry' },
+    { label: 'บันทึก Health', path: '/entry-health' },
+    { label: 'จัดการ SDGs', path: '/manage/sdgs' },
+    { label: 'จัดการ Health', path: '/manage/health' },
   ];
 
   const scrollToSection = (id) => {
@@ -145,6 +151,25 @@ export default function Layout() {
                   {tab.label}
                 </NavLink>
               ))}
+              {isAdmin && (
+                <div className="mx-1 h-6 w-px bg-white/25" />
+              )}
+              {isAdmin &&
+                adminTopTabs.map((tab) => (
+                  <NavLink
+                    key={tab.path}
+                    to={tab.path}
+                    className={({ isActive }) =>
+                      `px-3 py-1.5 text-xs font-black rounded-lg whitespace-nowrap transition-colors ${
+                        isActive
+                          ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                          : 'bg-white/10 text-amber-100 border border-white/15 hover:bg-white/25'
+                      }`
+                    }
+                  >
+                    {tab.label}
+                  </NavLink>
+                ))}
               {false && isOverviewRedesign && (
                 <div className="mx-1 h-6 w-px bg-slate-200" />
               )}
