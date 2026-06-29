@@ -260,6 +260,8 @@ export default function DashboardOverview() {
   const period = searchParams.get("period") || "All";
   const viewMode = searchParams.get("view") || "redesign";
   const redesignEnabled = viewMode !== "classic";
+  const showDeferredOverviewSections = false;
+  const showSdgGoalsOverviewSection = false;
 
   const setGlobalFilter = (y, p, view = viewMode) => {
     setSearchParams({ year: y, period: p, view });
@@ -1008,7 +1010,9 @@ export default function DashboardOverview() {
 
       {redesignEnabled && (
         <>
-          <SdgGoalsGridSection sdgGoalCards={sdgGoalCards} />
+          {showSdgGoalsOverviewSection && (
+            <SdgGoalsGridSection sdgGoalCards={sdgGoalCards} />
+          )}
           <OutcomeSystemCardsSection
             sdgPct={sdgPct}
             healthPct={healthPct}
@@ -1021,14 +1025,18 @@ export default function DashboardOverview() {
             performanceRanking={performanceRanking}
             navigate={navigate}
           />
-          <CoverageInsightSection
-            coverageByCategory={coverageByCategory}
-            yearlyVolume={yearlyVolume}
-          />
-          <SdgStatusDistributionSection sdgGoalCards={sdgGoalCards} />
-          <ProvincePlaceholderSection />
-          <InsightCardsSection />
-          <RoadTo2030TimelineSection />
+          {showDeferredOverviewSections && (
+            <>
+              <CoverageInsightSection
+                coverageByCategory={coverageByCategory}
+                yearlyVolume={yearlyVolume}
+              />
+              <SdgStatusDistributionSection sdgGoalCards={sdgGoalCards} />
+              <ProvincePlaceholderSection />
+              <InsightCardsSection />
+              <RoadTo2030TimelineSection />
+            </>
+          )}
         </>
       )}
 
