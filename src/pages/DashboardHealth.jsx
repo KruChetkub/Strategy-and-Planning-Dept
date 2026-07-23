@@ -614,25 +614,43 @@ export default function DashboardHealth() {
       { name: "รอดำเนินการ", value: statusCounts.pending, color: "#64748b" },
     ];
 
+    const regionSource = dashboardData.length > 0 ? dashboardData : rawMappedData;
+    const statusRank = { passed_100: 4, failed_75: 3, failed_50: 2, failed_0: 1, pending: 0 };
     const regions = {};
-    rawMappedData.forEach((d) => {
+    regionSource.forEach((d) => {
       if (d.region === "รายงานภาพรวม") return;
-      if (!regions[d.region]) regions[d.region] = { totalPerf: 0, count: 0 };
+      if (!regions[d.region]) {
+        regions[d.region] = {
+          totalPerf: 0,
+          count: 0,
+          statusCounts: { passed_100: 0, failed_75: 0, failed_50: 0, failed_0: 0, pending: 0 },
+        };
+      }
       const perf = parseFloat(d.current_value);
-      if (!isNaN(perf) && perf > 0) {
+      if (!isNaN(perf)) {
         regions[d.region].totalPerf += perf;
         regions[d.region].count += 1;
       }
+      const rawStatus = d.status_info?.raw || "pending";
+      regions[d.region].statusCounts[rawStatus] = (regions[d.region].statusCounts[rawStatus] || 0) + 1;
     });
 
     const regData = Object.keys(regions)
-      .map((r) => ({
-        name: r.replace("เขตสุขภาพที่ ", "เขต ").replace("เขตฯ ", "เขต "),
-        avg:
-          regions[r].count > 0
-            ? parseFloat((regions[r].totalPerf / regions[r].count).toFixed(2))
-            : 0,
-      }))
+      .map((r) => {
+        const statusEntries = Object.entries(regions[r].statusCounts);
+        const dominantStatus = statusEntries.sort((a, b) => {
+          if (b[1] !== a[1]) return b[1] - a[1];
+          return (statusRank[b[0]] || 0) - (statusRank[a[0]] || 0);
+        })[0]?.[0] || "pending";
+        return {
+          name: r.replace("เขตสุขภาพที่ ", "เขต ").replace("เขตฯ ", "เขต "),
+          avg:
+            regions[r].count > 0
+              ? parseFloat((regions[r].totalPerf / regions[r].count).toFixed(2))
+              : 0,
+          statusRaw: dominantStatus,
+        };
+      })
       .sort((a, b) => {
         const numA = parseInt(a.name.replace(/\D/g, "")) || 0;
         const numB = parseInt(b.name.replace(/\D/g, "")) || 0;
@@ -870,11 +888,7 @@ export default function DashboardHealth() {
                 <ThailandMap
                   dashboardData={categoryStats.regData.map((r) => {
                     const rnum = parseInt(r.name.replace(/\D/g, "")) || 0;
-                    let colorStr = "pending";
-                    if (r.avg >= 100) colorStr = "passed_100";
-                    else if (r.avg >= 75) colorStr = "failed_75";
-                    else if (r.avg >= 50) colorStr = "failed_50";
-                    else if (r.avg > 0) colorStr = "failed_0";
+                    const colorStr = r.statusRaw || "pending";
                     return {
                       region: `เขตที่ ${rnum}`,
                       current_value: r.avg.toFixed(2),
@@ -882,7 +896,7 @@ export default function DashboardHealth() {
                       status_info: {
                         raw: colorStr,
                         text: "คะแนนเฉลี่ย",
-                        percentage: r.avg,
+                        percentage: colorStr === "passed_100" ? 100 : 0,
                         color:
                           colorStr === "passed_100"
                             ? "text-emerald-600"
@@ -955,7 +969,20 @@ export default function DashboardHealth() {
                         barSize={25}
                       >
                         {categoryStats.regData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill="#3b82f6" />
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={
+                              entry.statusRaw === "passed_100"
+                                ? "#10b981"
+                                : entry.statusRaw === "failed_75"
+                                  ? "#eab308"
+                                  : entry.statusRaw === "failed_50"
+                                    ? "#f97316"
+                                    : entry.statusRaw === "failed_0"
+                                      ? "#f43f5e"
+                                      : "#cbd5e1"
+                            }
+                          />
                         ))}
                       </Bar>
                     </BarChart>
