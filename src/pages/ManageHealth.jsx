@@ -7,6 +7,12 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { parseOptionalNumber, trimToNull } from '../utils/kpiForm';
+import {
+  EVALUATION_DIRECTIONS,
+  DEFAULT_EVALUATION_DIRECTION,
+  resolveEvaluationDirection,
+  calculateAchievementPercentage,
+} from '../utils/kpiEvaluation';
 import KpiDataPolicyNotice from '../components/KpiDataPolicyNotice';
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -36,16 +42,9 @@ const getCurrentQuarterKey = () => {
   return 'target_q4';
 };
 
-const evalStatus = (perf, targetStr) => {
-  if (perf === null || perf === undefined || perf === '') return 'pending';
-  const tStr = String(targetStr || '').toLowerCase();
-  const match = tStr.match(/([\d.]+)/);
-  if (!match) return 'pending';
-  const tVal = parseFloat(match[1]);
-  const cVal = parseFloat(perf);
-  if (isNaN(cVal) || isNaN(tVal) || tVal === 0) return 'pending';
-  const isLower = tStr.includes('<') || tStr.includes('≤') || tStr.includes('ลด');
-  const pct = isLower ? (cVal === 0 ? 100 : (tVal / cVal) * 100) : (cVal / tVal) * 100;
+const evalStatus = (perf, targetStr, direction) => {
+  const pct = calculateAchievementPercentage(perf, targetStr, direction);
+  if (pct === null) return 'pending';
   if (pct >= 100) return 'passed';
   if (pct >= 75)  return 'warning';
   if (pct >= 50)  return 'risk';
@@ -66,11 +65,11 @@ const STATUS_STYLE = {
 const fetchHealth = async (year, period) => {
   let query = supabase
     .from('health_indicators')
-    .select('id, indicator_name, kpi_group, region, a_value, b_value, performance, target_q1, target_q2, target_q3, target_q4, fiscal_year, period, reference_url')
+    .select('id, indicator_name, kpi_group, region, a_value, b_value, performance, target_q1, target_q2, target_q3, target_q4, evaluation_direction, fiscal_year, period, reference_url')
     .eq('is_deleted', false)
     .order('indicator_name', { ascending: true })
     .order('kpi_group',      { ascending: true });
-    
+
   if (year && year !== 'All') query = query.eq('fiscal_year', year);
   if (period && period !== 'All') query = query.eq('period', period);
 
@@ -126,6 +125,7 @@ function EditableRow({ row, onSave, onCancel, isSaving, isNew = false, prefillIn
     target_q2:      '>= 50.00',
     target_q3:      '>= 60.00',
     target_q4:      '>= 70.00',
+    evaluation_direction: DEFAULT_EVALUATION_DIRECTION,
   };
   const [form, setForm] = useState(row ? {
     indicator_name: row.indicator_name ?? '',
@@ -138,6 +138,7 @@ function EditableRow({ row, onSave, onCancel, isSaving, isNew = false, prefillIn
     target_q2:      row.target_q2      ?? '>= 50.00',
     target_q3:      row.target_q3      ?? '>= 60.00',
     target_q4:      row.target_q4      ?? '>= 70.00',
+    evaluation_direction: resolveEvaluationDirection(row.evaluation_direction, row.target_q4),
   } : EMPTY);
 
   const inp = 'w-full bg-white border border-sky-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-sky-400/20 focus:border-sky-400 transition-all text-slate-800 font-medium';
@@ -177,6 +178,16 @@ function EditableRow({ row, onSave, onCancel, isSaving, isNew = false, prefillIn
               value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} />
           ))}
         </div>
+      </td>
+      {/* Evaluation Direction */}
+      <td className="px-3 py-2 align-top">
+        <select className={inp}
+          value={form.evaluation_direction}
+          onChange={e => setForm(f => ({ ...f, evaluation_direction: e.target.value }))}>
+          {Object.values(EVALUATION_DIRECTIONS).map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
       </td>
       {/* Actions */}
       <td className="px-3 py-2 align-top">
@@ -333,6 +344,7 @@ export default function ManageHealth() {
         target_q2:      trimToNull(form.target_q2),
         target_q3:      trimToNull(form.target_q3),
         target_q4:      trimToNull(form.target_q4),
+        evaluation_direction: form.evaluation_direction,
         fiscal_year:    fiscalYear === 'All' ? '2569' : fiscalYear,
         period:         period === 'All' ? 'Q4' : period,
       };
@@ -437,6 +449,7 @@ export default function ManageHealth() {
         <th className="px-4 py-2.5 w-28">B (ตัวหาร)</th>
         <th className="px-4 py-2.5 w-24">ผลงาน</th>
         <th className="px-4 py-2.5 w-52">เป้าหมาย Q1 / Q2 / Q3 / Q4</th>
+        <th className="px-4 py-2.5 w-32 text-center">วิธีประเมินผล</th>
         <th className="px-4 py-2.5 w-24 text-center">สถานะ</th>
         <th className="px-4 py-2.5 w-28 text-center">จัดการ</th>
       </tr>
@@ -486,7 +499,7 @@ export default function ManageHealth() {
           <option value="Year-End">Year-End</option>
         </select>
         <div className="w-px h-6 bg-slate-200 mx-1" />
-        
+
         <div className="relative flex-1 min-w-[200px]">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
@@ -522,7 +535,7 @@ export default function ManageHealth() {
           {Array.from(masterMap.entries()).map(([indName, subMap]) => {
             const isMasterOpen = !collapsedMaster.has(indName);
             const allRows      = Array.from(subMap.values()).flat();
-            const passedCount  = allRows.filter(r => evalStatus(r.performance, r[qKey]) === 'passed').length;
+            const passedCount  = allRows.filter(r => evalStatus(r.performance, r[qKey], r.evaluation_direction) === 'passed').length;
 
             return (
               <div key={indName} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
@@ -637,7 +650,8 @@ export default function ManageHealth() {
                                   )}
 
                                   {grpRows.map(r => {
-                                    const status = evalStatus(r.performance, r[qKey]);
+                                    const status = evalStatus(r.performance, r[qKey], r.evaluation_direction);
+                                    const direction = EVALUATION_DIRECTIONS[resolveEvaluationDirection(r.evaluation_direction, r[qKey])];
                                     const ss = STATUS_STYLE[status];
                                     return editingId === r.id ? (
                                       <EditableRow
@@ -678,6 +692,12 @@ export default function ManageHealth() {
                                               </span>
                                             ))}
                                           </div>
+                                        </td>
+                                        {/* Evaluation Direction */}
+                                        <td className="px-4 py-3 text-center">
+                                          <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-slate-50 border border-slate-200 text-[10px] font-black text-slate-500 whitespace-nowrap">
+                                            {direction.shortLabel}
+                                          </span>
                                         </td>
                                         {/* Status */}
                                         <td className="px-4 py-3 text-center">

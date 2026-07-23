@@ -21,6 +21,7 @@ import { ResponsiveContainer, Treemap, Tooltip } from "recharts";
 import { useVisitorCount } from "../hooks/useVisitorCount";
 import { supabase, withSupabaseTimeout } from "../lib/supabase";
 import { buildPipelineStats, isMeaningfulKpiValue } from "../utils/kpiMetrics";
+import { calculateAchievementPercentage } from "../utils/kpiEvaluation";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    DATA FETCHING & HELPERS — ไม่มีการแก้ไข logic ใดๆ ทั้งสิ้น
@@ -127,22 +128,9 @@ const getCurrentQuarter = () => {
   return { targetKey: "targetQ4" };
 };
 
-const evaluateHealthStatus = (current, targetString) => {
-  if (!current) return { raw: "pending" };
-  const curVal = parseFloat(current);
-  const tStr = String(targetString || "").toLowerCase();
-  const match = tStr.match(/([\d.]+)/);
-  if (!match) return { raw: "pending" };
-  const targetVal = parseFloat(match[1]);
-  if (isNaN(curVal) || isNaN(targetVal) || targetVal === 0)
-    return { raw: "pending" };
-  const isLowerBetter =
-    tStr.includes("<") || tStr.includes("≤") || tStr.includes("ลด");
-  let pct = isLowerBetter
-    ? curVal === 0
-      ? 100
-      : (targetVal / curVal) * 100
-    : (curVal / targetVal) * 100;
+const evaluateHealthStatus = (current, targetString, direction) => {
+  const pct = calculateAchievementPercentage(current, targetString, direction);
+  if (pct === null) return { raw: "pending" };
   if (pct >= 100) return { raw: "passed_100" };
   if (pct >= 75) return { raw: "failed_75" };
   if (pct >= 50) return { raw: "failed_50" };
@@ -410,7 +398,7 @@ export default function DashboardOverview() {
         finalTarget = tm[currentQ.targetKey] ?? "";
         finalPerf = overallRow.performance ?? "";
         if (finalPerf !== "")
-          finalStatus = evaluateHealthStatus(finalPerf, finalTarget).raw;
+          finalStatus = evaluateHealthStatus(finalPerf, finalTarget, overallRow.evaluation_direction).raw;
       } else {
         const fv = group.rows.find((r) => r.target_q1);
         if (fv) {
@@ -421,6 +409,7 @@ export default function DashboardOverview() {
             targetQ4: fv.target_q4,
           };
           finalTarget = tm[currentQ.targetKey] ?? "";
+          group.evaluation_direction = fv.evaluation_direction || null;
         }
         let tot = 0,
           cnt = 0;
@@ -442,7 +431,7 @@ export default function DashboardOverview() {
         });
         if (cnt > 0) {
           finalPerf = (tot / cnt).toFixed(2);
-          finalStatus = evaluateHealthStatus(finalPerf, finalTarget).raw;
+          finalStatus = evaluateHealthStatus(finalPerf, finalTarget, group.evaluation_direction).raw;
         }
       }
 
@@ -869,7 +858,7 @@ export default function DashboardOverview() {
               </span>
             </div>
           </div>
-        
+
 
           {/* Bottom Row: Metrics & Pills */}
           <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8 w-full">

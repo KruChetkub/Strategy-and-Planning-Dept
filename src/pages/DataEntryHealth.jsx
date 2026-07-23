@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { Activity, Loader2, Target, CheckCircle2, XCircle, Save, Link2, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { parseOptionalNumber, trimToNull } from '../utils/kpiForm';
+import {
+  EVALUATION_DIRECTIONS,
+  DEFAULT_EVALUATION_DIRECTION,
+  isTargetPassed,
+} from '../utils/kpiEvaluation';
 import KpiDataPolicyNotice from '../components/KpiDataPolicyNotice';
 
 export default function DataEntryHealth() {
@@ -21,6 +26,7 @@ export default function DataEntryHealth() {
     targetQ2: '>= 50.00',    // เป้าหมาย Q2
     targetQ3: '>= 60.00',    // เป้าหมาย Q3
     targetQ4: '>= 70.00',    // เป้าหมาย Q4
+    evaluationDirection: DEFAULT_EVALUATION_DIRECTION,
     fiscalYear: '2569',      // ปีงบประมาณ
     period: 'Q4',            // ไตรมาส
     referenceUrl: '',        // ลิ้งอ้างอิง (ต่อ 1 ลิ้งต่อตัวชี้วัด)
@@ -48,6 +54,7 @@ export default function DataEntryHealth() {
           target_q2: trimToNull(formData.targetQ2),
           target_q3: trimToNull(formData.targetQ3),
           target_q4: trimToNull(formData.targetQ4),
+          evaluation_direction: formData.evaluationDirection,
           fiscal_year: formData.fiscalYear,
           period: formData.period,
           reference_url: trimToNull(formData.referenceUrl),
@@ -56,12 +63,13 @@ export default function DataEntryHealth() {
       if (insertError) throw insertError;
 
       setShowSuccessModal(true);
-      
+
       if (saveMode === 'new') {
         // ล้างทุกอย่าง เริ่มตัวชี้วัดใหม่หมดเลย
         setFormData({
           indicatorName: '', subIndicatorName: '', region: '',
           A: '', B: '', performance: '', referenceUrl: '',
+          evaluationDirection: DEFAULT_EVALUATION_DIRECTION,
           targetQ1: '>= 50.00', targetQ2: '>= 50.00', targetQ3: '>= 60.00', targetQ4: '>= 70.00',
           fiscalYear: formData.fiscalYear,
           period: formData.period
@@ -69,10 +77,10 @@ export default function DataEntryHealth() {
       } else {
         // โหมด Save & Next: เก็บชื่อตัวชี้วัด, เป้าหมาย, และ referenceUrl (ลิ้งเดิมใช้ร่วมกันทุกเขตในตัวชี้วัดเดียวกัน)
         setFormData({
-          ...formData, 
+          ...formData,
           region: '',
-          A: '', 
-          B: '', 
+          A: '',
+          B: '',
           performance: ''
         });
       }
@@ -102,34 +110,28 @@ export default function DataEntryHealth() {
     if (formData.performance === '') return null;
     const perf = parseFloat(formData.performance);
     if (isNaN(perf)) return null;
-    
+
     // ดึง Quarter ปัจจุบันอัตโนมัติ
     const currentQ = getCurrentQuarter();
     const targetString = String(formData[currentQ.targetKey] || '');
-    
+
     // แยกเฉพาะตัวเลขจากช่อง Target
-    const targetMatch = targetString.match(/([\d.]+)/); 
+    const targetMatch = targetString.match(/([\d.]+)/);
     if (!targetMatch) return null;
-    
+
     const targetVal = parseFloat(targetMatch[1]);
     if (isNaN(targetVal)) return null;
-    
-    // เช็คว่าโลจิกคือ "ค่าน้อยยิ่งดี" หรือไม่
-    const isLowerBetter = targetString.includes('<') || targetString.includes('≤') || targetString.includes('ลด') || targetString.includes('ไม่เกิน') || targetString.includes('น้อยกว่า');
-  
-    let passed = false;
-    if (isLowerBetter) {
-      passed = perf <= targetVal;
-    } else {
-      passed = perf >= targetVal;
-    }
-    
+
+    const passed = isTargetPassed(perf, targetString, formData.evaluationDirection);
+    const direction = EVALUATION_DIRECTIONS[formData.evaluationDirection];
+
     return (
       <div className={`mt-3 flex flex-col gap-1.5`}>
         <div className="text-xs text-emerald-600 font-medium flex items-center gap-1">📍 ประเมินผลอัตโนมัติสำหรับ: <span className="text-slate-800 font-bold">{currentQ.name}</span></div>
         <div className={`flex items-center gap-2 text-sm font-bold px-3 py-1.5 rounded-lg w-fit border shadow-sm ${passed ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>
           {passed ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
           {passed ? `ยอดเยี่ยม: ผลงานผ่านเป้าหมาย ${currentQ.id} (${targetString})` : `ความเสี่ยง: ผลงานยังไม่ผ่านเป้าหมาย ${currentQ.id} (${targetString})`}
+          <span className="text-[11px] font-black opacity-75">· {direction.shortLabel}</span>
         </div>
       </div>
     );
@@ -152,13 +154,13 @@ export default function DataEntryHealth() {
       <KpiDataPolicyNotice />
 
       <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-3xl p-8 shadow-xl relative overflow-hidden space-y-8">
-        
+
         {/* Decorative background glow */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
 
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
-          
+
           {/* ข้อมูลทั่วไป */}
           <div className="lg:col-span-3 pb-2 border-b border-slate-200">
              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Target size={18} className="text-emerald-600"/> General Information</h2>
@@ -202,7 +204,7 @@ export default function DataEntryHealth() {
             <label className={labelClass}>ชื่อตัวชี้วัดย่อย</label>
             <input type="text" name="subIndicatorName" value={formData.subIndicatorName} onChange={handleChange} placeholder="เช่น กลุ่มประชากรเสี่ยง หรือ กิจกรรมย่อย" className={inputClass}/>
           </div>
-          
+
           {/* ส่วนเป้าหมายรายไตรมาส */}
           <div className="lg:col-span-3 pb-2 border-b border-slate-200 mt-4">
              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Activity size={18} className="text-amber-500"/> Quarterly Targets (ค่าเป้าหมาย)</h2>
@@ -212,7 +214,7 @@ export default function DataEntryHealth() {
             <label className="block text-sm font-bold text-amber-700 mb-1.5">ไตรมาส 1 (Q1)</label>
             <input type="text" name="targetQ1" required value={formData.targetQ1} onChange={handleChange} className="w-full bg-amber-50/50 border border-amber-200 rounded-lg px-4 py-2.5 outline-none text-amber-900 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm"/>
           </div>
-          
+
           <div className="space-y-2">
             <label className="block text-sm font-bold text-amber-700 mb-1.5">ไตรมาส 2 (Q2)</label>
             <input type="text" name="targetQ2" required value={formData.targetQ2} onChange={handleChange} className="w-full bg-amber-50/50 border border-amber-200 rounded-lg px-4 py-2.5 outline-none text-amber-900 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm"/>
@@ -229,6 +231,23 @@ export default function DataEntryHealth() {
           </div>
 
           <div className="lg:col-span-2"></div>
+
+          <div className="space-y-2 lg:col-span-3">
+            <label className="block text-sm font-bold text-amber-700 mb-1.5">วิธีประเมินผล</label>
+            <select
+              name="evaluationDirection"
+              required
+              value={formData.evaluationDirection}
+              onChange={handleChange}
+              className="w-full bg-amber-50/50 border border-amber-200 rounded-lg px-4 py-2.5 outline-none text-amber-900 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm font-bold"
+            >
+              {Object.values(EVALUATION_DIRECTIONS).map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label} - {option.hint}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* ข้อมูลประชากร & ผลงาน */}
           <div className="lg:col-span-3 pb-2 border-b border-slate-200 mt-4">
@@ -295,8 +314,8 @@ export default function DataEntryHealth() {
         </div>{/* end grid */}
 
         <div className="pt-8 border-t border-slate-200 flex flex-col sm:flex-row justify-end gap-4 relative z-10 p-2">
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             onClick={() => setSaveMode('new')}
             className="px-6 py-3.5 rounded-xl text-sm font-bold text-slate-600 bg-white hover:bg-slate-50 hover:text-slate-800 border border-slate-300 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm"
@@ -305,8 +324,8 @@ export default function DataEntryHealth() {
             บันทึก & เริ่มตัวชี้วัดใหม่หมด
           </button>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             onClick={() => setSaveMode('next')}
             className="px-8 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 group flex-1 sm:max-w-xs"
@@ -330,7 +349,7 @@ export default function DataEntryHealth() {
             <p className="text-slate-500 font-medium mb-10 leading-relaxed">
               อัปเดตข้อมูล <span className="text-emerald-600 font-bold">Health KPI</span> เรียบร้อยแล้วครับ ระบบพร้อมสำหรับการบันทึกข้อมูลลำดับถัดไป
             </p>
-            <button 
+            <button
               onClick={() => setShowSuccessModal(false)}
               className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-2xl transition-all shadow-lg hover:shadow-xl active:scale-95 tracking-wide"
             >
@@ -352,7 +371,7 @@ export default function DataEntryHealth() {
             <p className="text-slate-500 font-medium mb-8 leading-relaxed">
               {error}
             </p>
-            <button 
+            <button
               onClick={() => setError(null)}
               className="w-full py-3.5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-2xl transition-all shadow-lg hover:shadow-xl active:scale-95"
             >

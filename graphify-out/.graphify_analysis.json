@@ -1,0 +1,191 @@
+{
+  "communities": {
+    "0": [
+      "api_kpi_handler"
+    ],
+    "1": [
+      "api_kpiapi_evaluatekpistatus"
+    ],
+    "2": [
+      "api_kpiapi_fetchhealthindicators"
+    ],
+    "3": [
+      "api_kpiapi_fetchsdgindicators"
+    ],
+    "4": [
+      "auth_protectedadminroute_protectedadminroute"
+    ],
+    "5": [
+      "auth_protectedadminroute_unauthorizedpanel"
+    ],
+    "6": [
+      "charts_thailandmap_thailandmap"
+    ],
+    "7": [
+      "components_kpidatapolicynotice_kpidatapolicynotice"
+    ],
+    "8": [
+      "context_authcontext_authprovider"
+    ],
+    "9": [
+      "context_authcontext_useauth"
+    ],
+    "10": [
+      "hooks_usecountup_usecountup"
+    ],
+    "11": [
+      "hooks_usevisitorcount_usevisitorcount"
+    ],
+    "12": [
+      "layout_header_header"
+    ],
+    "13": [
+      "layout_layout_layout"
+    ],
+    "14": [
+      "layout_sidebar_sidebar"
+    ],
+    "15": [
+      "lib_supabase_withsupabasetimeout"
+    ],
+    "16": [
+      "pages_adminlogin_adminlogin"
+    ],
+    "17": [
+      "pages_dashboard_dashboard"
+    ],
+    "18": [
+      "pages_dashboardhealth_dashboardhealth"
+    ],
+    "19": [
+      "pages_dashboardoverview_dashboardoverview"
+    ],
+    "20": [
+      "pages_dataentry_dataentry"
+    ],
+    "21": [
+      "pages_dataentryhealth_dataentryhealth"
+    ],
+    "22": [
+      "pages_kpigroup_kpigroup"
+    ],
+    "23": [
+      "pages_managehealth_managehealth"
+    ],
+    "24": [
+      "pages_managekpis_managekpis"
+    ],
+    "25": [
+      "pages_managesdgs_managesdgs"
+    ],
+    "26": [
+      "src\\assets\\kpi-system-logo.svg"
+    ],
+    "27": [
+      "src\\assets\\logoCopyDsp.png"
+    ],
+    "28": [
+      "utils_kpiform_parseoptionalnumber"
+    ],
+    "29": [
+      "utils_kpiform_trimtonull"
+    ],
+    "30": [
+      "utils_kpimetrics_buildpipelinestats"
+    ],
+    "31": [
+      "utils_kpimetrics_ismeaningfulkpivalue"
+    ]
+  },
+  "cohesion": {
+    "0": 1.0,
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "4": 1.0,
+    "5": 1.0,
+    "6": 1.0,
+    "7": 1.0,
+    "8": 1.0,
+    "9": 1.0,
+    "10": 1.0,
+    "11": 1.0,
+    "12": 1.0,
+    "13": 1.0,
+    "14": 1.0,
+    "15": 1.0,
+    "16": 1.0,
+    "17": 1.0,
+    "18": 1.0,
+    "19": 1.0,
+    "20": 1.0,
+    "21": 1.0,
+    "22": 1.0,
+    "23": 1.0,
+    "24": 1.0,
+    "25": 1.0,
+    "26": 1.0,
+    "27": 1.0,
+    "28": 1.0,
+    "29": 1.0,
+    "30": 1.0,
+    "31": 1.0
+  },
+  "gods": [
+    {
+      "id": "api_kpi_handler",
+      "label": "handler",
+      "degree": 0
+    },
+    {
+      "id": "api_kpiapi_fetchsdgindicators",
+      "label": "fetchSDGIndicators",
+      "degree": 0
+    },
+    {
+      "id": "api_kpiapi_fetchhealthindicators",
+      "label": "fetchHealthIndicators",
+      "degree": 0
+    },
+    {
+      "id": "api_kpiapi_evaluatekpistatus",
+      "label": "evaluateKPIStatus",
+      "degree": 0
+    },
+    {
+      "id": "components_kpidatapolicynotice_kpidatapolicynotice",
+      "label": "KpiDataPolicyNotice",
+      "degree": 0
+    },
+    {
+      "id": "auth_protectedadminroute_unauthorizedpanel",
+      "label": "UnauthorizedPanel",
+      "degree": 0
+    },
+    {
+      "id": "auth_protectedadminroute_protectedadminroute",
+      "label": "ProtectedAdminRoute",
+      "degree": 0
+    },
+    {
+      "id": "charts_thailandmap_thailandmap",
+      "label": "ThailandMap",
+      "degree": 0
+    },
+    {
+      "id": "layout_header_header",
+      "label": "Header",
+      "degree": 0
+    },
+    {
+      "id": "layout_layout_layout",
+      "label": "Layout",
+      "degree": 0
+    }
+  ],
+  "surprises": [],
+  "tokens": {
+    "input": 2050,
+    "output": 97
+  }
+}

@@ -33,6 +33,7 @@ import {
 import ThailandMap from "../components/charts/ThailandMap";
 import { supabase, withSupabaseTimeout } from "../lib/supabase";
 import { buildPipelineStats, isMeaningfulKpiValue } from "../utils/kpiMetrics";
+import { calculateAchievementPercentage } from "../utils/kpiEvaluation";
 
 const fetchHealthData = async (year, period) => {
   let query = supabase
@@ -68,60 +69,19 @@ const getCurrentQuarter = () => {
   return { id: "Q4", targetKey: "targetQ4", name: "ไตรมาส 4 (ก.ค. - ก.ย.)" };
 };
 
-const evaluateStatus = (current, target) => {
-  if (current === "" || current === null || current === undefined) {
-    return {
-      color: "text-slate-400",
-      border: "border-slate-500/30",
-      bg: "bg-slate-500",
-      shadow: "shadow-none",
-      text: "รอประเมินหลักเกณฑ์",
-      raw: "pending",
-      percentage: 0,
-    };
-  }
+const evaluateStatus = (current, target, direction) => {
+  const pendingStatus = {
+    color: "text-slate-400",
+    border: "border-slate-500/30",
+    bg: "bg-slate-500",
+    shadow: "shadow-none",
+    text: "รอประเมินหลักเกณฑ์",
+    raw: "pending",
+    percentage: 0,
+  };
 
-  const curVal = parseFloat(current);
-  const targetStr = String(target).toLowerCase();
-
-  const match = targetStr.match(/([\d.]+)/);
-  if (!match)
-    return {
-      color: "text-slate-400",
-      border: "border-slate-500/30",
-      bg: "bg-slate-500",
-      shadow: "shadow-none",
-      text: "รอประเมินหลักเกณฑ์",
-      raw: "pending",
-      percentage: 0,
-    };
-
-  const targetVal = parseFloat(match[1]);
-  if (isNaN(curVal) || isNaN(targetVal) || targetVal === 0 || curVal === 0) {
-    return {
-      color: "text-slate-400",
-      border: "border-slate-500/30",
-      bg: "bg-slate-500",
-      shadow: "shadow-none",
-      text: "รอดำเนินการ",
-      raw: "pending",
-      percentage: 0,
-    };
-  }
-
-  const isLowerBetter =
-    targetStr.includes("<") ||
-    targetStr.includes("≤") ||
-    targetStr.includes("ลด") ||
-    targetStr.includes("ไม่เกิน") ||
-    targetStr.includes("น้อยกว่า");
-
-  let percentage = 0;
-  if (isLowerBetter) {
-    percentage = curVal === 0 ? 100 : (targetVal / curVal) * 100;
-  } else {
-    percentage = (curVal / targetVal) * 100;
-  }
+  const percentage = calculateAchievementPercentage(current, target, direction);
+  if (percentage === null) return pendingStatus;
 
   if (percentage >= 100) {
     return {
@@ -153,17 +113,17 @@ const evaluateStatus = (current, target) => {
       raw: "failed_50",
       percentage,
     };
-  } else {
-    return {
-      color: "text-rose-500",
-      border: "border-rose-500/50",
-      bg: "bg-rose-500",
-      shadow: "shadow-[0_0_10px_rgba(244,63,94,0.5)]",
-      text: "ระดับวิกฤติ",
-      raw: "failed_0",
-      percentage,
-    };
   }
+
+  return {
+    color: "text-rose-500",
+    border: "border-rose-500/50",
+    bg: "bg-rose-500",
+    shadow: "shadow-[0_0_10px_rgba(244,63,94,0.5)]",
+    text: "ระดับวิกฤติ",
+    raw: "failed_0",
+    percentage,
+  };
 };
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -245,6 +205,7 @@ export default function DashboardHealth() {
       const status = evaluateStatus(
         calcPerf !== null ? calcPerf : "",
         currentQuarterTarget,
+        row.evaluation_direction,
       );
 
       return {
@@ -258,6 +219,7 @@ export default function DashboardHealth() {
         pop_b: cleanB,
         pop_35: cleanA,
         status_info: status,
+        evaluation_direction: row.evaluation_direction || null,
         reference_url: row.reference_url || null,
       };
     });
@@ -381,6 +343,7 @@ export default function DashboardHealth() {
             ? qTargets[currentQ.id.toLowerCase()] || "N/A"
             : "N/A",
           rawRegion: `เขต ${i}`,
+          evaluation_direction: dashboardData[0]?.evaluation_direction || null,
         };
       }
       let overallReport = null;
@@ -397,6 +360,7 @@ export default function DashboardHealth() {
 
         regionAgg[rnum].target = d.target_value;
         regionAgg[rnum].rawRegion = d.region;
+        regionAgg[rnum].evaluation_direction = d.evaluation_direction;
 
         const curA = parseFloat(d.pop_35 || 0);
         const curB = parseFloat(d.pop_b || 0);
@@ -434,8 +398,9 @@ export default function DashboardHealth() {
         ovPerf = parseFloat(overallReport.current_value);
         if (isNaN(ovPerf)) ovPerf = 0;
         ovStatus = evaluateStatus(
-          ovPerf > 0 ? ovPerf : "",
+          Number.isFinite(ovPerf) ? ovPerf : "",
           overallReport.target_value,
+          overallReport.evaluation_direction,
         );
       }
 
@@ -461,7 +426,7 @@ export default function DashboardHealth() {
           const finalPerfStr = useOverallOnly || reg.count > 0 ? calcPerf : "";
           const status = useOverallOnly
             ? ovStatus
-            : evaluateStatus(finalPerfStr, reg.target);
+            : evaluateStatus(finalPerfStr, reg.target, reg.evaluation_direction);
 
           if (!useOverallOnly) {
             totals[status.raw] = (totals[status.raw] || 0) + 1;
@@ -625,6 +590,7 @@ export default function DashboardHealth() {
         status: evaluateStatus(
           avgPerf,
           relevantData[0].targets[currentQ.targetKey],
+          relevantData[0].evaluation_direction,
         ),
         passed: totals.passed_100,
         failed: totals.failed_75 + totals.failed_50 + totals.failed_0,

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { fetchSDGIndicators, fetchHealthIndicators, evaluateKPIStatus } from '../api/kpiApi';
 import { buildPipelineStats, isMeaningfulKpiValue } from '../utils/kpiMetrics';
+import { calculateAchievementPercentage } from '../utils/kpiEvaluation';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    CONFIG
@@ -137,21 +138,13 @@ export default function KPIGroup() {
         ? (row[qKey] || config.getTarget(row))
         : config.getTarget(row);
       const perf = config.getPerformance(row);
-      const status = evaluateKPIStatus(perf, targetRaw);
+      const status = evaluateKPIStatus(perf, targetRaw, row.evaluation_direction);
 
       // Calculate % for progress bar
       let pct = 0;
       if (status.raw !== 'pending') {
-        const curVal = parseFloat(perf);
-        const tStr = String(targetRaw || '').toLowerCase();
-        const match = tStr.match(/([\d.]+)/);
-        if (match) {
-          const tVal = parseFloat(match[1]);
-          const isLower = tStr.includes('<') || tStr.includes('≤') || tStr.includes('ลด');
-          pct = isLower
-            ? (curVal === 0 ? 100 : Math.min(100, (tVal / curVal) * 100))
-            : Math.min(100, (curVal / tVal) * 100);
-        }
+        const percentage = calculateAchievementPercentage(perf, targetRaw, row.evaluation_direction);
+        if (percentage !== null) pct = Math.min(100, percentage);
       }
 
       return {
@@ -458,5 +451,3 @@ export default function KPIGroup() {
     </div>
   );
 }
-
-

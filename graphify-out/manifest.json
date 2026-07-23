@@ -1,0 +1,197 @@
+{
+  "api/kpi.js": {
+    "mtime": 1774421257.0699184,
+    "ast_hash": "74471d7623f33f97b154c0b1ebd6889f",
+    "semantic_hash": "74471d7623f33f97b154c0b1ebd6889f"
+  },
+  "google_apps_script.js": {
+    "mtime": 1774328740.042379,
+    "ast_hash": "fc15f4900df475cfdc305ecc1dcc2811",
+    "semantic_hash": "fc15f4900df475cfdc305ecc1dcc2811"
+  },
+  "package.json": {
+    "mtime": 1777427624.9737656,
+    "ast_hash": "9c698b95b1ca500621585c41d25ea2fb",
+    "semantic_hash": "9c698b95b1ca500621585c41d25ea2fb"
+  },
+  "postcss.config.js": {
+    "mtime": 1773888039.9284108,
+    "ast_hash": "ef3ba2a81ba19f8ea5ddf625521e96f0",
+    "semantic_hash": "ef3ba2a81ba19f8ea5ddf625521e96f0"
+  },
+  "scripts/merge_regions.mjs": {
+    "mtime": 1774323940.1561053,
+    "ast_hash": "cfebefb9364b93507d5351a0514f4e7e",
+    "semantic_hash": "cfebefb9364b93507d5351a0514f4e7e"
+  },
+  "scripts/migrate_data.mjs": {
+    "mtime": 1776996108.117033,
+    "ast_hash": "5c2b8ce6ea7371660c0ef4ceae0587d4",
+    "semantic_hash": "5c2b8ce6ea7371660c0ef4ceae0587d4"
+  },
+  "scripts/verify_migration.mjs": {
+    "mtime": 1776996108.117033,
+    "ast_hash": "29eb0b75421eac5d01d8f935b02dfc95",
+    "semantic_hash": "29eb0b75421eac5d01d8f935b02dfc95"
+  },
+  "src/App.jsx": {
+    "mtime": 1777428371.7770178,
+    "ast_hash": "e09649ee9a97f7ecc89737a5885f903e",
+    "semantic_hash": "e09649ee9a97f7ecc89737a5885f903e"
+  },
+  "src/api/kpiApi.js": {
+    "mtime": 1777346615.5886965,
+    "ast_hash": "d601b29b3ec68459f9deb8a0c9fe8642",
+    "semantic_hash": "d601b29b3ec68459f9deb8a0c9fe8642"
+  },
+  "src/components/KpiDataPolicyNotice.jsx": {
+    "mtime": 1777619153.0254822,
+    "ast_hash": "84f21d5c2baa5fc64893fd65c5e3b557",
+    "semantic_hash": "84f21d5c2baa5fc64893fd65c5e3b557"
+  },
+  "src/components/auth/ProtectedAdminRoute.jsx": {
+    "mtime": 1777263383.9478881,
+    "ast_hash": "185b955ce7516007aa4c1b5ed50cb2ab",
+    "semantic_hash": "185b955ce7516007aa4c1b5ed50cb2ab"
+  },
+  "src/components/charts/ThailandMap.jsx": {
+    "mtime": 1774324775.8921175,
+    "ast_hash": "89e7bf0386537ac69319d776453b34b0",
+    "semantic_hash": "89e7bf0386537ac69319d776453b34b0"
+  },
+  "src/components/layout/Header.jsx": {
+    "mtime": 1773888352.8158138,
+    "ast_hash": "c96df69c3d8ce7d1a959d0744461776c",
+    "semantic_hash": "c96df69c3d8ce7d1a959d0744461776c"
+  },
+  "src/components/layout/Layout.jsx": {
+    "mtime": 1779794242.0716982,
+    "ast_hash": "2fc269e231589f7fa2f5f3718c687963",
+    "semantic_hash": "2fc269e231589f7fa2f5f3718c687963"
+  },
+  "src/components/layout/Sidebar.jsx": {
+    "mtime": 1777262938.530831,
+    "ast_hash": "af4823a446a7062578cb32587783b270",
+    "semantic_hash": "af4823a446a7062578cb32587783b270"
+  },
+  "src/context/AuthContext.jsx": {
+    "mtime": 1777263244.378158,
+    "ast_hash": "0c97cf03a73fd2706c086fa4f2fc8896",
+    "semantic_hash": "0c97cf03a73fd2706c086fa4f2fc8896"
+  },
+  "src/data/thailand_regions.json": {
+    "mtime": 1774324071.9889462,
+    "ast_hash": "bbaae5134a5ccb0be47990ad4fbfe6c1",
+    "semantic_hash": "bbaae5134a5ccb0be47990ad4fbfe6c1"
+  },
+  "src/hooks/useCountUp.js": {
+    "mtime": 1777006425.8535173,
+    "ast_hash": "ce0d4fb855b70f3df758c6ecfd17f81c",
+    "semantic_hash": "ce0d4fb855b70f3df758c6ecfd17f81c"
+  },
+  "src/hooks/useVisitorCount.js": {
+    "mtime": 1777622555.6978853,
+    "ast_hash": "94f926e9890c157d01311d755ebbc75d",
+    "semantic_hash": "94f926e9890c157d01311d755ebbc75d"
+  },
+  "src/lib/supabase.js": {
+    "mtime": 1777261298.4507546,
+    "ast_hash": "4c399b9f7ff2a2f016f4c302b226b09e",
+    "semantic_hash": "4c399b9f7ff2a2f016f4c302b226b09e"
+  },
+  "src/main.jsx": {
+    "mtime": 1777266165.179562,
+    "ast_hash": "31b2a895ebc1c7bc3c2b959f74c881cf",
+    "semantic_hash": "31b2a895ebc1c7bc3c2b959f74c881cf"
+  },
+  "src/pages/AdminLogin.jsx": {
+    "mtime": 1777283837.5785363,
+    "ast_hash": "2e70e44996739994805fff6157f4dccd",
+    "semantic_hash": "2e70e44996739994805fff6157f4dccd"
+  },
+  "src/pages/Dashboard.jsx": {
+    "mtime": 1778035422.3791144,
+    "ast_hash": "88234cd1ce241b1379e98b76b47d69da",
+    "semantic_hash": "88234cd1ce241b1379e98b76b47d69da"
+  },
+  "src/pages/DashboardHealth.jsx": {
+    "mtime": 1777619316.6673203,
+    "ast_hash": "65c5f729260a37f61132ec1c2eb78ddd",
+    "semantic_hash": "65c5f729260a37f61132ec1c2eb78ddd"
+  },
+  "src/pages/DashboardOverview.jsx": {
+    "mtime": 1782713791.3906596,
+    "ast_hash": "800f2ae0556412dd3ece4f6b3c9e6f21",
+    "semantic_hash": "800f2ae0556412dd3ece4f6b3c9e6f21"
+  },
+  "src/pages/DataEntry.jsx": {
+    "mtime": 1777619153.0566359,
+    "ast_hash": "3383748b89c63569ec16be4046d36586",
+    "semantic_hash": "3383748b89c63569ec16be4046d36586"
+  },
+  "src/pages/DataEntryHealth.jsx": {
+    "mtime": 1777619153.0927904,
+    "ast_hash": "1e0537bbd559ba8f3838bd96e7a8cb00",
+    "semantic_hash": "1e0537bbd559ba8f3838bd96e7a8cb00"
+  },
+  "src/pages/KPIGroup.jsx": {
+    "mtime": 1777619326.15536,
+    "ast_hash": "61dd9754b594e56817988e2c2d27f2e5",
+    "semantic_hash": "61dd9754b594e56817988e2c2d27f2e5"
+  },
+  "src/pages/ManageHealth.jsx": {
+    "mtime": 1777619153.1772435,
+    "ast_hash": "f6316472dc46cdcb5ced223703a6297c",
+    "semantic_hash": "f6316472dc46cdcb5ced223703a6297c"
+  },
+  "src/pages/ManageKPIs.jsx": {
+    "mtime": 1777619153.2182453,
+    "ast_hash": "26d187e0d3145a43e37aeeb8bb4461f5",
+    "semantic_hash": "26d187e0d3145a43e37aeeb8bb4461f5"
+  },
+  "src/pages/ManageSDGs.jsx": {
+    "mtime": 1777619153.132435,
+    "ast_hash": "17686e1eed786ba625af0ebf64c738e8",
+    "semantic_hash": "17686e1eed786ba625af0ebf64c738e8"
+  },
+  "src/store/useStore.js": {
+    "mtime": 1773888305.614721,
+    "ast_hash": "242509693497cb152358f16e9781583b",
+    "semantic_hash": "242509693497cb152358f16e9781583b"
+  },
+  "src/utils/kpiForm.js": {
+    "mtime": 1777618786.6799111,
+    "ast_hash": "f0f85472b2fe3f1663e7edfec433da96",
+    "semantic_hash": "f0f85472b2fe3f1663e7edfec433da96"
+  },
+  "src/utils/kpiMetrics.js": {
+    "mtime": 1777619290.8696837,
+    "ast_hash": "c03ce433922e5d4473a7783acfd23c7c",
+    "semantic_hash": "c03ce433922e5d4473a7783acfd23c7c"
+  },
+  "supabase_profiles_rls.sql": {
+    "mtime": 1777261672.501958,
+    "ast_hash": "fc1dfc0a9cc8f70f8a2c55b30e3423f2",
+    "semantic_hash": "fc1dfc0a9cc8f70f8a2c55b30e3423f2"
+  },
+  "supabase_schema.sql": {
+    "mtime": 1773891454.996234,
+    "ast_hash": "4c029cd35ba44fd0c69828c7948d1da2",
+    "semantic_hash": "4c029cd35ba44fd0c69828c7948d1da2"
+  },
+  "tailwind.config.js": {
+    "mtime": 1777545727.9938354,
+    "ast_hash": "35c11ece705b3f2a5864b7c225f9c903",
+    "semantic_hash": "35c11ece705b3f2a5864b7c225f9c903"
+  },
+  "vercel.json": {
+    "mtime": 1774424574.7045345,
+    "ast_hash": "6411d2fbb5f0e00aaff0ca0ded84e0b6",
+    "semantic_hash": "6411d2fbb5f0e00aaff0ca0ded84e0b6"
+  },
+  "vite.config.js": {
+    "mtime": 1773888035.9019527,
+    "ast_hash": "ac605e4b540846227ec125e13f24f3e2",
+    "semantic_hash": "ac605e4b540846227ec125e13f24f3e2"
+  }
+}
