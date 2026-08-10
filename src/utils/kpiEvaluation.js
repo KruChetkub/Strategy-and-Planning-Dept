@@ -41,11 +41,11 @@ export function resolveEvaluationDirection(direction, targetString = '') {
 export function calculateAchievementPercentage(current, targetString, direction) {
   if (current === '' || current === null || current === undefined) return null;
 
-  const curVal = parseFloat(current);
-  const match = String(targetString || '').match(/([\d.]+)/);
+  const curVal = parseFloat(String(current).replace('−', '-'));
+  const match = String(targetString || '').replace('−', '-').match(/-?\d+(?:\.\d+)?/);
   if (!match) return null;
 
-  const targetVal = parseFloat(match[1]);
+  const targetVal = parseFloat(match[0]);
   if (isNaN(curVal) || isNaN(targetVal) || targetVal === 0) return null;
 
   const resolvedDirection = resolveEvaluationDirection(direction, targetString);

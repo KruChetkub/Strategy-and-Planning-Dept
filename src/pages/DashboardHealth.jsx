@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -32,7 +32,7 @@ import {
 } from "recharts";
 import ThailandMap from "../components/charts/ThailandMap";
 import { supabase, withSupabaseTimeout } from "../lib/supabase";
-import { buildPipelineStats, isMeaningfulKpiValue } from "../utils/kpiMetrics";
+import { isMeaningfulKpiValue } from "../utils/kpiMetrics";
 import { calculateAchievementPercentage } from "../utils/kpiEvaluation";
 
 const fetchHealthData = async (year, period) => {
@@ -237,13 +237,23 @@ export default function DashboardHealth() {
   }, [rawMappedData]);
 
   const indicatorParam = searchParams.get("indicator") || "";
+  const subIndicatorParam = searchParams.get("subIndicator") || "ALL";
   const [selectedMain, setSelectedMain] = useState(indicatorParam);
+  const [overviewStatusFilter, setOverviewStatusFilter] = useState(null);
+  const [expandedHealthIndicators, setExpandedHealthIndicators] = useState(
+    () => new Set(),
+  );
+  const healthKpiListRef = useRef(null);
 
   useEffect(() => {
-    if (indicatorParam && uniqueMainIndicators.includes(indicatorParam)) {
+    if (!indicatorParam) {
+      setSelectedMain("");
+      return;
+    }
+
+    if (uniqueMainIndicators.includes(indicatorParam)) {
       setSelectedMain(indicatorParam);
     } else if (
-      indicatorParam &&
       !selectedMain &&
       uniqueMainIndicators.length > 0
     ) {
@@ -256,12 +266,85 @@ export default function DashboardHealth() {
 
   const handleMainChange = (e) => {
     setSelectedMain(e.target.value);
+    setSelectedSub("ALL");
     // Remove indicator param when manually changing
     if (indicatorParam) {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete("indicator");
+      newParams.delete("subIndicator");
       setSearchParams(newParams);
     }
+  };
+
+  const toggleExpandedHealthIndicator = (title) => {
+    setExpandedHealthIndicators((current) => {
+      const next = new Set(current);
+      if (next.has(title)) {
+        next.delete(title);
+      } else {
+        next.add(title);
+      }
+      return next;
+    });
+  };
+
+  const handleOverviewStatusFilter = (statusKey) => {
+    setOverviewStatusFilter((current) =>
+      current === statusKey ? null : statusKey,
+    );
+    scrollHealthPageToElement(healthKpiListRef.current);
+  };
+
+  const scrollHealthPageToElement = (targetEl) => {
+    if (!targetEl) return;
+    window.requestAnimationFrame(() => {
+      const mainEl = document.querySelector("main");
+      if (mainEl) {
+        const mainRect = mainEl.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const stickyOffset = 190;
+        const targetTop =
+          mainEl.scrollTop + targetRect.top - mainRect.top - stickyOffset;
+        mainEl.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
+      } else {
+        targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  };
+
+  const scrollHealthPageToTop = () => {
+    window.requestAnimationFrame(() => {
+      const mainEl = document.querySelector("main");
+      if (mainEl) {
+        mainEl.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  };
+
+  const handleSummaryRowClick = (kpi) => {
+    if (kpi.subIndicators.length > 0) {
+      toggleExpandedHealthIndicator(kpi.title);
+      return;
+    }
+
+    setSelectedMain(kpi.title);
+    setSelectedSub("ALL");
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("indicator", kpi.title);
+    newParams.delete("subIndicator");
+    setSearchParams(newParams);
+    scrollHealthPageToTop();
+  };
+
+  const handleSubSummaryRowClick = (title, subtitle) => {
+    setSelectedMain(title);
+    setSelectedSub(subtitle);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("indicator", title);
+    newParams.set("subIndicator", subtitle);
+    setSearchParams(newParams);
+    scrollHealthPageToTop();
   };
 
   // 3. Extract Unique Sub-Indicators
@@ -279,8 +362,19 @@ export default function DashboardHealth() {
   const [selectedSub, setSelectedSub] = useState("ALL");
 
   useEffect(() => {
-    setSelectedSub("ALL");
-  }, [selectedMain]);
+    if (
+      subIndicatorParam &&
+      subIndicatorParam !== "ALL" &&
+      uniqueSubIndicators.includes(subIndicatorParam)
+    ) {
+      setSelectedSub(subIndicatorParam);
+      return;
+    }
+
+    if (selectedSub !== "ALL" && !uniqueSubIndicators.includes(selectedSub)) {
+      setSelectedSub("ALL");
+    }
+  }, [subIndicatorParam, uniqueSubIndicators, selectedSub]);
 
   // 4. Apply Filters
   const dashboardData = useMemo(() => {
@@ -528,29 +622,9 @@ export default function DashboardHealth() {
       };
     }, [dashboardData, currentQ]);
 
-  const pipelineStats = useMemo(() => {
-    return buildPipelineStats(
-      dashboardData.map((item) => ({
-        reported: isMeaningfulKpiValue(item.current_value),
-        assessed: item.status_info.raw !== "pending",
-      })),
-    );
-  }, [dashboardData]);
-
   // 6. Calculate Summaries for ALL Indicators (for Overview Mode)
   const allSummaries = useMemo(() => {
-    const reports = [];
-    uniqueMainIndicators.forEach((title) => {
-      const kpisForTitle = rawMappedData.filter(
-        (d) => d.title === title && d.subtitle === "ALL",
-      );
-      const relevantData =
-        kpisForTitle.length > 0
-          ? kpisForTitle
-          : rawMappedData.filter((d) => d.title === title);
-
-      if (relevantData.length === 0) return;
-
+    const summarizeRows = (rows) => {
       let totalA = 0;
       let totalB = 0;
       let regionsWithPerf = 0;
@@ -563,13 +637,13 @@ export default function DashboardHealth() {
         pending: 0,
       };
 
-      relevantData.forEach((d) => {
+      rows.forEach((d) => {
         const isOverall = d.region === "รายงานภาพรวม";
         if (isOverall) overallReport = d;
         const cur = parseFloat(d.current_value);
         if (!isOverall) {
           totals[d.status_info.raw] = (totals[d.status_info.raw] || 0) + 1;
-          if (!isNaN(cur) && cur > 0) {
+          if (!isNaN(cur) && isMeaningfulKpiValue(d.current_value)) {
             totalA += parseFloat(d.pop_35 || 0);
             totalB += parseFloat(d.pop_b || 0);
             regionsWithPerf++;
@@ -581,19 +655,55 @@ export default function DashboardHealth() {
       if (regionsWithPerf > 0) {
         avgPerf = totalB > 0 ? ((totalA / totalB) * 100).toFixed(2) : "-";
       } else if (overallReport) {
-        avgPerf = parseFloat(overallReport.current_value).toFixed(2);
+        const ovPerf = parseFloat(overallReport.current_value);
+        avgPerf = !isNaN(ovPerf) ? ovPerf.toFixed(2) : "-";
       }
 
-      reports.push({
-        title,
+      return {
         avgPerf,
         status: evaluateStatus(
           avgPerf,
-          relevantData[0].targets[currentQ.targetKey],
-          relevantData[0].evaluation_direction,
+          rows[0].targets[currentQ.targetKey],
+          rows[0].evaluation_direction,
         ),
         passed: totals.passed_100,
         failed: totals.failed_75 + totals.failed_50 + totals.failed_0,
+        pending: totals.pending,
+      };
+    };
+
+    const reports = [];
+    uniqueMainIndicators.forEach((title) => {
+      const kpisForTitle = rawMappedData.filter(
+        (d) => d.title === title && d.subtitle === "ALL",
+      );
+      const relevantData =
+        kpisForTitle.length > 0
+          ? kpisForTitle
+          : rawMappedData.filter((d) => d.title === title);
+
+      if (relevantData.length === 0) return;
+
+      const subIndicators = Array.from(
+        new Set(
+          rawMappedData
+            .filter((d) => d.title === title && d.subtitle)
+            .map((d) => d.subtitle),
+        ),
+      ).map((subtitle) => ({
+        title,
+        subtitle,
+        ...summarizeRows(
+          rawMappedData.filter(
+            (d) => d.title === title && d.subtitle === subtitle,
+          ),
+        ),
+      }));
+
+      reports.push({
+        title,
+        subIndicators,
+        ...summarizeRows(relevantData),
       });
     });
     return reports;
@@ -609,9 +719,9 @@ export default function DashboardHealth() {
     });
 
     const statusData = [
-      { name: "ผ่านเกณฑ์", value: statusCounts.passed, color: "#10b981" },
-      { name: "ไม่ผ่านเกณฑ์", value: statusCounts.failed, color: "#f43f5e" },
-      { name: "รอดำเนินการ", value: statusCounts.pending, color: "#64748b" },
+      { key: "passed", name: "ผ่านเกณฑ์", value: statusCounts.passed, color: "#10b981" },
+      { key: "failed", name: "ไม่ผ่านเกณฑ์", value: statusCounts.failed, color: "#f43f5e" },
+      { key: "pending", name: "รอดำเนินการ", value: statusCounts.pending, color: "#64748b" },
     ];
 
     const regionSource = dashboardData.length > 0 ? dashboardData : rawMappedData;
@@ -664,6 +774,34 @@ export default function DashboardHealth() {
       statusCounts,
     };
   }, [allSummaries, rawMappedData]);
+
+  const filteredAllSummaries = useMemo(() => {
+    const matchesStatusFilter = (summaryItem) => {
+      if (!overviewStatusFilter) return true;
+      if (overviewStatusFilter === "passed") {
+        return summaryItem.status.raw === "passed_100";
+      }
+      if (overviewStatusFilter === "pending") {
+        return summaryItem.status.raw === "pending";
+      }
+      return (
+        summaryItem.status.raw !== "passed_100" &&
+        summaryItem.status.raw !== "pending"
+      );
+    };
+
+    return [...allSummaries]
+      .filter(matchesStatusFilter)
+      .sort((a, b) => {
+        const aPending = a.avgPerf === "-";
+        const bPending = b.avgPerf === "-";
+        if (aPending !== bPending) return aPending ? 1 : -1;
+        if (aPending && bPending) {
+          return a.title.localeCompare(b.title, "th");
+        }
+        return parseFloat(a.avgPerf) - parseFloat(b.avgPerf);
+      });
+  }, [allSummaries, overviewStatusFilter]);
 
   if (isLoading) {
     return (
@@ -1031,9 +1169,20 @@ export default function DashboardHealth() {
                       paddingAngle={5}
                       dataKey="value"
                       stroke="none"
+                      onClick={(entry) => handleOverviewStatusFilter(entry.key)}
+                      className="cursor-pointer"
                     >
                       {categoryStats.statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.color}
+                          opacity={
+                            !overviewStatusFilter ||
+                            overviewStatusFilter === entry.key
+                              ? 1
+                              : 0.35
+                          }
+                        />
                       ))}
                     </Pie>
                     <Tooltip
@@ -1059,9 +1208,15 @@ export default function DashboardHealth() {
               {/* ✅ Legend — Light mode (ไม่ใช้ dark class แล้ว) */}
               <div className="flex gap-3 mt-4 flex-wrap justify-center w-full">
                 {categoryStats.statusData.map((s, idx) => (
-                  <div
+                  <button
+                    type="button"
                     key={idx}
-                    className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200"
+                    onClick={() => handleOverviewStatusFilter(s.key)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${
+                      overviewStatusFilter === s.key
+                        ? "bg-slate-100 border-slate-400 shadow-sm"
+                        : "bg-slate-50 border-slate-200 hover:bg-white hover:border-slate-300"
+                    }`}
                   >
                     <span
                       className="w-2.5 h-2.5 rounded-full flex-shrink-0"
@@ -1070,30 +1225,55 @@ export default function DashboardHealth() {
                     <span className="text-xs font-bold text-slate-600">
                       {s.name} ({s.value})
                     </span>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Bottom Table: 5 indicators for improvement */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-md overflow-hidden flex flex-col">
+          {/* Bottom Table: All Health KPI indicators */}
+          <div
+            ref={healthKpiListRef}
+            className="bg-white border border-slate-200 rounded-3xl p-6 shadow-md overflow-hidden flex flex-col scroll-mt-44"
+          >
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <AlertTriangle size={18} className="text-rose-500" /> 5
-                อันดับตัวชี้วัดที่ควรเร่งรัด (คะแนนเฉลี่ยระดับประเทศต่ำสุด)
-              </h3>
+              <div>
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <AlertTriangle size={18} className="text-rose-500" />
+                  รายการตัวชี้วัด Health KPI (
+                  {filteredAllSummaries.length} / {allSummaries.length} รายการ)
+                </h3>
+                {overviewStatusFilter && (
+                  <p className="text-sm text-slate-500 font-semibold mt-1">
+                    กำลังแสดงเฉพาะสถานะ:{" "}
+                    {
+                      categoryStats.statusData.find(
+                        (s) => s.key === overviewStatusFilter,
+                      )?.name
+                    }
+                  </p>
+                )}
+              </div>
+              {overviewStatusFilter && (
+                <button
+                  type="button"
+                  onClick={() => setOverviewStatusFilter(null)}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-white hover:border-slate-300 text-xs font-black transition-colors"
+                >
+                  แสดงทั้งหมด
+                </button>
+              )}
             </div>
             <div className="overflow-x-auto custom-scrollbar pb-4 flex-1">
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider bg-slate-50">
                     <th className="p-4 font-bold rounded-tl-xl w-16 text-center">
-                      อันดับ
+                      ลำดับ
                     </th>
                     <th className="p-4 font-bold max-w-md">ชื่อตัวชี้วัด</th>
                     <th className="p-4 font-bold text-center w-36">
-                      ผ่านกี่หมวด/เขต
+                      ผ่าน / ไม่ผ่าน / รอข้อมูล
                     </th>
                     <th className="p-4 font-bold text-center w-36 bg-slate-100">
                       คะแนนเฉลี่ย (%)
@@ -1104,60 +1284,175 @@ export default function DashboardHealth() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {[...allSummaries]
-                    .filter((s) => s.avgPerf !== "-")
-                    .sort(
-                      (a, b) => parseFloat(a.avgPerf) - parseFloat(b.avgPerf),
-                    )
-                    .slice(0, 5)
-                    .map((kpi, idx) => (
-                      <tr
-                        key={idx}
-                        className="hover:bg-slate-50 transition-colors group"
-                      >
-                        <td className="p-4 text-center">
-                          <span className="inline-flex w-7 h-7 rounded-lg bg-rose-50 border border-rose-100 text-rose-500 text-sm font-black shadow-inner items-center justify-center">
-                            {idx + 1}
-                          </span>
-                        </td>
-                        <td
-                          className="p-4 text-slate-700 font-medium truncate max-w-md"
-                          title={kpi.title}
+                  {filteredAllSummaries.map((kpi, idx) => {
+                    const hasSubIndicators = kpi.subIndicators.length > 0;
+                    const isExpanded = expandedHealthIndicators.has(kpi.title);
+
+                    return (
+                      <React.Fragment key={kpi.title}>
+                        <tr
+                          onClick={() => handleSummaryRowClick(kpi)}
+                          className="hover:bg-emerald-50/60 transition-colors group cursor-pointer"
+                          title={
+                            hasSubIndicators
+                              ? `${isExpanded ? "ซ่อน" : "แสดง"}ตัวชี้วัดย่อย: ${kpi.title}`
+                              : `คลิกเพื่อดูรายละเอียด: ${kpi.title}`
+                          }
                         >
-                          {kpi.title}
-                        </td>
-                        <td className="p-4 text-center">
-                          <div className="flex items-center justify-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 w-max mx-auto">
-                            <span className="text-emerald-600 font-bold">
-                              {kpi.passed}
+                          <td className="p-4 text-center">
+                            <span className="inline-flex w-7 h-7 rounded-lg bg-rose-50 border border-rose-100 text-rose-500 text-sm font-black shadow-inner items-center justify-center">
+                              {idx + 1}
                             </span>
-                            <span className="text-slate-400 text-xs mt-0.5">
-                              /
+                          </td>
+                          <td className="p-4 text-slate-700 font-medium truncate max-w-md group-hover:text-emerald-700 group-hover:underline underline-offset-4">
+                            <span className="inline-flex items-center gap-2 max-w-full">
+                              {hasSubIndicators && (
+                                <span className="text-slate-400 text-xs w-4 shrink-0">
+                                  {isExpanded ? "▼" : "▶"}
+                                </span>
+                              )}
+                              <span className="truncate">{kpi.title}</span>
+                              {hasSubIndicators && (
+                                <span className="shrink-0 text-[10px] font-black text-cyan-700 bg-cyan-50 border border-cyan-100 rounded-full px-2 py-0.5">
+                                  {kpi.subIndicators.length} ตัวย่อย
+                                </span>
+                              )}
                             </span>
-                            <span className="text-rose-500 font-bold">
-                              {kpi.failed}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-4 text-center bg-slate-50 font-black text-rose-500 text-lg rounded-md">
-                          {kpi.avgPerf}
-                        </td>
-                        <td className="p-4 text-center">
-                          <div
-                            className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border ${kpi.status.border} bg-white whitespace-nowrap shadow-sm`}
+                          </td>
+                          <td className="p-4 text-center">
+                            <div className="flex items-center justify-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 w-max mx-auto">
+                              <span className="text-emerald-600 font-bold">
+                                {kpi.passed}
+                              </span>
+                              <span className="text-slate-400 text-xs mt-0.5">
+                                /
+                              </span>
+                              <span className="text-rose-500 font-bold">
+                                {kpi.failed}
+                              </span>
+                              <span className="text-slate-400 text-xs mt-0.5">
+                                /
+                              </span>
+                              <span className="text-slate-400 font-bold">
+                                {kpi.pending}
+                              </span>
+                            </div>
+                          </td>
+                          <td
+                            className={`p-4 text-center bg-slate-50 font-black text-lg rounded-md ${
+                              kpi.avgPerf === "-"
+                                ? "text-slate-400"
+                                : kpi.status.raw === "passed_100"
+                                  ? "text-emerald-600"
+                                  : kpi.status.raw === "failed_75"
+                                    ? "text-yellow-500"
+                                    : kpi.status.raw === "failed_50"
+                                      ? "text-orange-500"
+                                      : "text-rose-500"
+                            }`}
                           >
-                            <span
-                              className={`w-2 h-2 rounded-full ${kpi.status.bg} ${kpi.status.shadow}`}
-                            ></span>
-                            <span
-                              className={`text-[11px] font-bold ${kpi.status.color} uppercase tracking-wide`}
+                            {kpi.avgPerf}
+                          </td>
+                          <td className="p-4 text-center">
+                            <div
+                              className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border ${kpi.status.border} bg-white whitespace-nowrap shadow-sm`}
                             >
-                              {kpi.status.text}
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              <span
+                                className={`w-2 h-2 rounded-full ${kpi.status.bg} ${kpi.status.shadow}`}
+                              ></span>
+                              <span
+                                className={`text-[11px] font-bold ${kpi.status.color} uppercase tracking-wide`}
+                              >
+                                {kpi.status.text}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {hasSubIndicators &&
+                          isExpanded &&
+                          kpi.subIndicators.map((sub, subIdx) => (
+                            <tr
+                              key={`${kpi.title}-${sub.subtitle}`}
+                              onClick={() =>
+                                handleSubSummaryRowClick(
+                                  kpi.title,
+                                  sub.subtitle,
+                                )
+                              }
+                              className="hover:bg-cyan-50/50 transition-colors group cursor-pointer"
+                              title={`คลิกเพื่อดูรายละเอียด: ${sub.subtitle}`}
+                            >
+                              <td className="p-0" />
+                              <td
+                                colSpan={4}
+                                className="py-0 pr-4 pl-16"
+                              >
+                                <div className="grid grid-cols-[minmax(0,1fr)_9rem_9rem_9rem] items-center bg-cyan-50/40 border-b border-cyan-100 last:border-b-0 group-hover:bg-cyan-50 transition-colors">
+                                  <div className="flex items-center gap-8 min-w-0 p-4">
+                                    <span className="inline-flex w-8 h-7 rounded-lg bg-cyan-50 border border-cyan-100 text-cyan-600 text-xs font-black shadow-inner items-center justify-center shrink-0">
+                                      {idx + 1}.{subIdx + 1}
+                                    </span>
+                                    <span className="text-cyan-500">↳</span>
+                                    <span className="text-slate-600 font-medium truncate group-hover:text-cyan-700 group-hover:underline underline-offset-4">
+                                      {sub.subtitle}
+                                    </span>
+                                  </div>
+                                  <div className="p-4 text-center">
+                                    <div className="flex items-center justify-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-cyan-100 w-max mx-auto">
+                                      <span className="text-emerald-600 font-bold">
+                                        {sub.passed}
+                                      </span>
+                                      <span className="text-slate-400 text-xs mt-0.5">
+                                        /
+                                      </span>
+                                      <span className="text-rose-500 font-bold">
+                                        {sub.failed}
+                                      </span>
+                                      <span className="text-slate-400 text-xs mt-0.5">
+                                        /
+                                      </span>
+                                      <span className="text-slate-400 font-bold">
+                                        {sub.pending}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div
+                                    className={`p-4 text-center bg-cyan-50/40 font-black text-lg rounded-md ${
+                                      sub.avgPerf === "-"
+                                        ? "text-slate-400"
+                                        : sub.status.raw === "passed_100"
+                                          ? "text-emerald-600"
+                                          : sub.status.raw === "failed_75"
+                                            ? "text-yellow-500"
+                                            : sub.status.raw === "failed_50"
+                                              ? "text-orange-500"
+                                              : "text-rose-500"
+                                    }`}
+                                  >
+                                    {sub.avgPerf}
+                                  </div>
+                                  <div className="p-4 text-center">
+                                    <div
+                                      className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border ${sub.status.border} bg-white whitespace-nowrap shadow-sm`}
+                                    >
+                                      <span
+                                        className={`w-2 h-2 rounded-full ${sub.status.bg} ${sub.status.shadow}`}
+                                      ></span>
+                                      <span
+                                        className={`text-[11px] font-bold ${sub.status.color} uppercase tracking-wide`}
+                                      >
+                                        {sub.status.text}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1185,7 +1480,7 @@ export default function DashboardHealth() {
                   <MapPin size={16} className="text-emerald-600" />{" "}
                   แผนที่ผลการดำเนินงาน
                 </h3>
-                <div className="h-[400px] xl:h-[420px] bg-slate-50 rounded-2xl overflow-hidden">
+                <div className="h-[500px] xl:h-[560px] bg-slate-50 rounded-2xl overflow-hidden">
                   <ThailandMap dashboardData={aggregatedMapData} />
                 </div>
               </div>
@@ -1337,41 +1632,6 @@ export default function DashboardHealth() {
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 text-white flex items-center justify-center shrink-0 z-10 shadow-md shadow-orange-500/20">
                     <Calendar size={28} />
                   </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
-                  <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">
-                    Total KPIs
-                  </p>
-                  <p className="text-2xl font-black text-slate-950 mt-1 tabular-nums">
-                    {pipelineStats.total}
-                  </p>
-                </div>
-                <div className="bg-white border border-sky-200 rounded-3xl p-4 shadow-sm">
-                  <p className="text-[11px] font-black uppercase tracking-wider text-sky-700">
-                    Reported
-                  </p>
-                  <p className="text-2xl font-black text-slate-950 mt-1 tabular-nums">
-                    {pipelineStats.reported}
-                  </p>
-                </div>
-                <div className="bg-white border border-emerald-200 rounded-3xl p-4 shadow-sm">
-                  <p className="text-[11px] font-black uppercase tracking-wider text-emerald-700">
-                    Assessed
-                  </p>
-                  <p className="text-2xl font-black text-slate-950 mt-1 tabular-nums">
-                    {pipelineStats.assessed}
-                  </p>
-                </div>
-                <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
-                  <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">
-                    Pending
-                  </p>
-                  <p className="text-2xl font-black text-slate-950 mt-1 tabular-nums">
-                    {pipelineStats.pending}
-                  </p>
                 </div>
               </div>
 

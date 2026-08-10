@@ -217,30 +217,6 @@ export default function ThailandMap({ dashboardData }) {
         </div>
       )}
 
-      {/* Horizontal Legend at the Bottom */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-slate-200 p-3 px-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 z-20">
-         <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-emerald-500 rounded shadow-sm"></span>
-            <span className="text-[11px] font-bold text-slate-700">บรรลุเป้าหมาย</span>
-         </div>
-         <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-yellow-500 rounded shadow-sm"></span>
-            <span className="text-[11px] font-bold text-slate-700">ต่ำกว่าเป้า (75-99%)</span>
-         </div>
-         <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-orange-500 rounded shadow-sm"></span>
-            <span className="text-[11px] font-bold text-slate-700">ระดับเสี่ยง (50-74%)</span>
-         </div>
-         <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-rose-500 rounded shadow-sm"></span>
-            <span className="text-[11px] font-bold text-slate-700">ระดับวิกฤติ (&lt;50%)</span>
-         </div>
-         <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-slate-200 rounded border border-slate-300"></span>
-            <span className="text-[11px] font-bold text-slate-600">รอดำเนินการ</span>
-         </div>
-      </div>
-
     </div>
   );
 }
