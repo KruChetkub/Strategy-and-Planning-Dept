@@ -1,5 +1,70 @@
 {
-  "generated_at": "2026-09-16T07:26:52.338001+00:00",
-  "nodes": {},
+  "generated_at": "2026-09-16T08:21:36.374536+00:00",
+  "nodes": {
+    "auth_protectedadminroute_protectedadminroute": {
+      "code_fingerprint": "0e83f734d916b1f1ba3b25f2f34920b35760fec0078dc793ba224aeae06137b3",
+      "label": "ProtectedAdminRoute",
+      "last": "2026-09-16T07:29:34.504011+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-16T07:29:34.504011+00:00",
+          "outcome": "useful",
+          "q": "ตรงสิทธิ์ admin ให้สามารถลบข้อมูลได้ทั้ง Supabase และหน้า frontend และไม่นำรายการที่ลบไปแสดงหน้าเว็บ"
+        }
+      ],
+      "score": 0.999165504,
+      "source_file": "src/components/auth/ProtectedAdminRoute.jsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "context_authcontext_authprovider": {
+      "code_fingerprint": "ab6e44104b2650cc513d3fad844e8d548b37f793874eaeb5c82f304f80ff223c",
+      "label": "AuthProvider",
+      "last": "2026-09-16T07:29:34.504011+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-16T07:29:34.504011+00:00",
+          "outcome": "useful",
+          "q": "ตรงสิทธิ์ admin ให้สามารถลบข้อมูลได้ทั้ง Supabase และหน้า frontend และไม่นำรายการที่ลบไปแสดงหน้าเว็บ"
+        }
+      ],
+      "score": 0.999165504,
+      "source_file": "src/context/AuthContext.jsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "pages_managehealth_managehealth": {
+      "code_fingerprint": "deeed2697a8fc6c3a6dc6ef24065f6b424bc58f528cffb24d2e04823c933ae3a",
+      "label": "ManageHealth",
+      "last": "2026-09-16T07:29:34.504011+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-16T07:29:34.504011+00:00",
+          "outcome": "useful",
+          "q": "ตรงสิทธิ์ admin ให้สามารถลบข้อมูลได้ทั้ง Supabase และหน้า frontend และไม่นำรายการที่ลบไปแสดงหน้าเว็บ"
+        }
+      ],
+      "score": 0.999165504,
+      "source_file": "src/pages/ManageHealth.jsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "pages_managesdgs_managesdgs": {
+      "code_fingerprint": "3c6b11253d8c70e3ccbeba6de88c4021b76718475ac5942f8a3d74336d92da71",
+      "label": "ManageSDGs",
+      "last": "2026-09-16T07:29:34.504011+00:00",
+      "provenance": [
+        {
+          "date": "2026-09-16T07:29:34.504011+00:00",
+          "outcome": "useful",
+          "q": "ตรงสิทธิ์ admin ให้สามารถลบข้อมูลได้ทั้ง Supabase และหน้า frontend และไม่นำรายการที่ลบไปแสดงหน้าเว็บ"
+        }
+      ],
+      "score": 0.999165504,
+      "source_file": "src/pages/ManageSDGs.jsx",
+      "status": "tentative",
+      "uses": 1
+    }
+  },
   "version": 1
 }

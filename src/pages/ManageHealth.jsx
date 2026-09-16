@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { parseOptionalNumber, trimToNull } from '../utils/kpiForm';
+import ConfirmationModal from '../components/ConfirmationModal';
 import {
   EVALUATION_DIRECTIONS,
   DEFAULT_EVALUATION_DIRECTION,
@@ -266,6 +267,7 @@ export default function ManageHealth() {
   const [isSaving,         setIsSaving]         = useState(false);
   const [search,           setSearch]           = useState('');
   const [toasts,           setToasts]           = useState([]);
+  const [confirmation,     setConfirmation]     = useState(null);
   const [collapsedMaster,  setCollapsedMaster]  = useState(new Set());
   const [collapsedSub,     setCollapsedSub]     = useState(new Set());
   const [editingLinkFor,   setEditingLinkFor]   = useState(null);  // indicator_name
@@ -330,7 +332,7 @@ export default function ManageHealth() {
   const cancelAll    = () => { setEditingId(null); setAddingInGroup(null); };
 
   /* ── SAVE ── */
-  const handleSave = async (id, form) => {
+  const executeSave = async (id, form) => {
     setIsSaving(true);
     try {
       const payload = {
@@ -369,8 +371,23 @@ export default function ManageHealth() {
     }
   };
 
+  const handleSave = (id, form) => {
+    const label = form.indicator_name || form.kpi_group || form.region || 'รายการ Health KPI';
+    setConfirmation({
+      type: 'save',
+      id,
+      form,
+      label,
+      title: id ? 'ยืนยันการบันทึกการแก้ไข' : 'ยืนยันการเพิ่มข้อมูล Health KPI',
+      message: id
+        ? 'ระบบจะอัปเดตข้อมูลรายการนี้ใน Supabase'
+        : 'ระบบจะสร้างข้อมูลเขตสุขภาพรายการใหม่ใน Supabase',
+      confirmLabel: id ? 'ยืนยันบันทึก' : 'ยืนยันเพิ่มรายการ',
+    });
+  };
+
   /* ── DELETE FROM SUPABASE + UNDO WINDOW ── */
-  const handleDelete = (id, label) => {
+  const executeDelete = (id, label) => {
     const toastId = addToast(`ลบ "${label.slice(0, 25)}..." แล้ว`, 'delete');
     const timerId = setTimeout(async () => {
       try {
@@ -401,6 +418,17 @@ export default function ManageHealth() {
     );
   };
 
+  const handleDelete = (id, label) => {
+    setConfirmation({
+      type: 'delete',
+      id,
+      label,
+      title: 'ยืนยันการลบข้อมูล Health KPI',
+      message: 'รายการจะหายจากหน้าจัดการและถูกลบออกจาก Supabase หลังหมดเวลายกเลิก 5 วินาที',
+      confirmLabel: 'ยืนยันลบ',
+    });
+  };
+
   const handleUndo = toastId => {
     const p = pendingDeletes.current[toastId];
     if (!p) return;
@@ -412,17 +440,10 @@ export default function ManageHealth() {
   };
 
   /* ── SAVE REFERENCE LINK (per indicator_name ─ update all matching rows) ── */
-  const handleSaveLink = async (indName) => {
+  const executeSaveLink = async (indName, rawUrl) => {
     setIsSavingLink(true);
     try {
-      const url = trimToNull(linkInput);
-      if (url) {
-        try { new URL(url); } catch {
-          addToast('รูปแบบ URL ไม่ถูกต้อง — กรุณาเริ่มด้วย https://', 'error');
-          setIsSavingLink(false);
-          return;
-        }
-      }
+      const url = trimToNull(rawUrl);
       const { error } = await supabase
         .from('health_indicators')
         .update({ reference_url: url })
@@ -437,6 +458,42 @@ export default function ManageHealth() {
       addToast(`เกิดข้อผิดพลาด: ${err.message}`, 'error');
     } finally {
       setIsSavingLink(false);
+    }
+  };
+
+  const handleSaveLink = indName => {
+    const url = trimToNull(linkInput);
+    if (url) {
+      try { new URL(url); } catch {
+        addToast('รูปแบบ URL ไม่ถูกต้อง — กรุณาเริ่มด้วย https://', 'error');
+        return;
+      }
+    }
+
+    setConfirmation({
+      type: 'link',
+      label: indName,
+      indName,
+      url: linkInput,
+      title: url ? 'ยืนยันการบันทึกลิ้งอ้างอิง' : 'ยืนยันการลบลิ้งอ้างอิง',
+      message: url
+        ? 'ระบบจะอัปเดตลิ้งอ้างอิงให้ทุกเขตของตัวชี้วัดนี้'
+        : 'ระบบจะลบลิ้งอ้างอิงออกจากทุกเขตของตัวชี้วัดนี้',
+      confirmLabel: url ? 'ยืนยันบันทึกลิ้ง' : 'ยืนยันลบลิ้ง',
+    });
+  };
+
+  const handleConfirmAction = () => {
+    const action = confirmation;
+    if (!action) return;
+    setConfirmation(null);
+
+    if (action.type === 'save') {
+      executeSave(action.id, action.form);
+    } else if (action.type === 'delete') {
+      executeDelete(action.id, action.label);
+    } else if (action.type === 'link') {
+      executeSaveLink(action.indName, action.url);
     }
   };
 
@@ -474,6 +531,19 @@ export default function ManageHealth() {
   return (
     <div className="max-w-7xl mx-auto space-y-5 pb-16 fade-in-up">
       <Toast toasts={toasts} onUndo={handleUndo} />
+      <ConfirmationModal
+        open={!!confirmation}
+        title={confirmation?.title}
+        message={confirmation?.message}
+        confirmLabel={confirmation?.confirmLabel}
+        tone={confirmation?.type === 'delete' || (confirmation?.type === 'link' && !trimToNull(confirmation?.url)) ? 'danger' : 'primary'}
+        isLoading={isSaving || isSavingLink}
+        onCancel={() => setConfirmation(null)}
+        onConfirm={handleConfirmAction}
+        details={confirmation?.label && (
+          <p><span className="font-black text-slate-700">รายการ:</span> {confirmation.label}</p>
+        )}
+      />
 
       {/* ══ HEADER ══ */}
       <div className="relative overflow-hidden bg-gradient-to-r from-emerald-600 to-teal-700 rounded-3xl p-8 text-white shadow-xl">
@@ -492,7 +562,7 @@ export default function ManageHealth() {
             </div>
           </div>
           <span className="text-[11px] text-white/40 font-bold bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
-            🛡️ Soft Delete — Undo ได้ 5 วิ
+            🛡️ ลบถาวร — Undo ได้ 5 วิ
           </span>
         </div>
       </div>

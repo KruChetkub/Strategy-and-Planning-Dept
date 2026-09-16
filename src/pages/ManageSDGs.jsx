@@ -8,6 +8,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { parseOptionalNumber, trimToNull } from '../utils/kpiForm';
 import KpiDataPolicyNotice from '../components/KpiDataPolicyNotice';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    HELPERS
@@ -217,6 +218,7 @@ export default function ManageSDGs() {
   const [isSaving,        setIsSaving]        = useState(false);
   const [search,          setSearch]          = useState('');
   const [toasts,          setToasts]          = useState([]);
+  const [confirmation,    setConfirmation]    = useState(null);
   const [collapsedGroups, setCollapsedGroups] = useState(new Set());
   const pendingDeletes = useRef({});
 
@@ -268,11 +270,7 @@ export default function ManageSDGs() {
   const collapseAll = () => setCollapsedGroups(new Set(grouped.keys()));
 
   /* ── SAVE (Edit หรือ Add New) ── */
-  const handleSave = async (id, form) => {
-    if (!form.indicator_name.trim()) {
-      addToast('กรุณากรอกชื่อตัวชี้วัด', 'error');
-      return;
-    }
+  const executeSave = async (id, form) => {
     setIsSaving(true);
     try {
       const payload = {
@@ -311,8 +309,26 @@ export default function ManageSDGs() {
     }
   };
 
+  const handleSave = (id, form) => {
+    if (!form.indicator_name.trim()) {
+      addToast('กรุณากรอกชื่อตัวชี้วัด', 'error');
+      return;
+    }
+    setConfirmation({
+      type: 'save',
+      id,
+      form,
+      label: form.indicator_name.trim(),
+      title: id ? 'ยืนยันการบันทึกการแก้ไข' : 'ยืนยันการเพิ่มตัวชี้วัด SDGs',
+      message: id
+        ? 'ระบบจะอัปเดตข้อมูลรายการนี้ใน Supabase'
+        : 'ระบบจะสร้างตัวชี้วัด SDGs รายการใหม่ใน Supabase',
+      confirmLabel: id ? 'ยืนยันบันทึก' : 'ยืนยันเพิ่มรายการ',
+    });
+  };
+
   /* ── DELETE FROM SUPABASE + UNDO WINDOW ── */
-  const handleDelete = (id, name) => {
+  const executeDelete = (id, name) => {
     const toastId = addToast(`ลบ "${name.slice(0, 28)}..." แล้ว`, 'delete');
     const timerId = setTimeout(async () => {
       try {
@@ -341,6 +357,29 @@ export default function ManageSDGs() {
       { queryKey: ['manage-sdgs'] },
       old => Array.isArray(old) ? old.filter(k => k.id !== id) : old
     );
+  };
+
+  const handleDelete = (id, name) => {
+    setConfirmation({
+      type: 'delete',
+      id,
+      label: name,
+      title: 'ยืนยันการลบข้อมูล SDGs',
+      message: 'รายการจะหายจากหน้าจัดการและถูกลบออกจาก Supabase หลังหมดเวลายกเลิก 5 วินาที',
+      confirmLabel: 'ยืนยันลบ',
+    });
+  };
+
+  const handleConfirmAction = () => {
+    const action = confirmation;
+    if (!action) return;
+    setConfirmation(null);
+
+    if (action.type === 'save') {
+      executeSave(action.id, action.form);
+    } else if (action.type === 'delete') {
+      executeDelete(action.id, action.label);
+    }
   };
 
   const handleUndo = toastId => {
@@ -392,6 +431,19 @@ export default function ManageSDGs() {
   return (
     <div className="max-w-7xl mx-auto space-y-5 pb-16 fade-in-up">
       <Toast toasts={toasts} onUndo={handleUndo} />
+      <ConfirmationModal
+        open={!!confirmation}
+        title={confirmation?.title}
+        message={confirmation?.message}
+        confirmLabel={confirmation?.confirmLabel}
+        tone={confirmation?.type === 'delete' ? 'danger' : 'primary'}
+        isLoading={isSaving}
+        onCancel={() => setConfirmation(null)}
+        onConfirm={handleConfirmAction}
+        details={confirmation?.label && (
+          <p><span className="font-black text-slate-700">รายการ:</span> {confirmation.label}</p>
+        )}
+      />
 
       {/* ══ HEADER ══ */}
       <div className="relative overflow-hidden bg-gradient-to-r from-violet-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl">
@@ -417,7 +469,7 @@ export default function ManageSDGs() {
               <Plus size={16} /> เพิ่มตัวชี้วัดใหม่
             </button>
             <span className="text-[11px] text-white/40 font-bold bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
-              🛡️ Soft Delete — Undo ได้ 5 วิ
+              🛡️ ลบถาวร — Undo ได้ 5 วิ
             </span>
           </div>
         </div>

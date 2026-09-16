@@ -8,12 +8,15 @@ import {
   isTargetPassed,
 } from '../utils/kpiEvaluation';
 import KpiDataPolicyNotice from '../components/KpiDataPolicyNotice';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 export default function DataEntryHealth() {
   const [loading, setLoading] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [error, setError] = useState(null);
   const [saveMode, setSaveMode] = useState('next'); // 'next' or 'new'
+  const [pendingSaveMode, setPendingSaveMode] = useState('next');
 
   const [formData, setFormData] = useState({
     indicatorName: '',       // ชื่อตัวชี้วัด
@@ -38,7 +41,17 @@ export default function DataEntryHealth() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const mode = e.nativeEvent.submitter?.value || 'next';
+    setPendingSaveMode(mode);
+    setShowConfirmation(true);
+  };
+
+  const handleConfirmSave = async () => {
+    const mode = pendingSaveMode;
+    setShowConfirmation(false);
+    setSaveMode(mode);
     setLoading(true);
+    setError(null);
 
     try {
       const { error: insertError } = await supabase
@@ -64,7 +77,7 @@ export default function DataEntryHealth() {
 
       setShowSuccessModal(true);
 
-      if (saveMode === 'new') {
+      if (mode === 'new') {
         // ล้างทุกอย่าง เริ่มตัวชี้วัดใหม่หมดเลย
         setFormData({
           indicatorName: '', subIndicatorName: '', region: '',
@@ -316,8 +329,8 @@ export default function DataEntryHealth() {
         <div className="pt-8 border-t border-slate-200 flex flex-col sm:flex-row justify-end gap-4 relative z-10 p-2">
           <button
             type="submit"
+            value="new"
             disabled={loading}
-            onClick={() => setSaveMode('new')}
             className="px-6 py-3.5 rounded-xl text-sm font-bold text-slate-600 bg-white hover:bg-slate-50 hover:text-slate-800 border border-slate-300 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm"
           >
             {loading && saveMode === 'new' ? <Loader2 className="animate-spin" size={18} /> : <Activity size={18} />}
@@ -326,8 +339,8 @@ export default function DataEntryHealth() {
 
           <button
             type="submit"
+            value="next"
             disabled={loading}
-            onClick={() => setSaveMode('next')}
             className="px-8 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 group flex-1 sm:max-w-xs"
           >
             {loading && saveMode === 'next' ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} className="group-hover:scale-110 transition-transform" />}
@@ -335,6 +348,25 @@ export default function DataEntryHealth() {
           </button>
         </div>
       </form>
+
+      <ConfirmationModal
+        open={showConfirmation}
+        title={pendingSaveMode === 'new' ? 'ยืนยันบันทึกและเริ่มใหม่' : 'ยืนยันบันทึกและกรอกเขตถัดไป'}
+        message={pendingSaveMode === 'new'
+          ? 'ระบบจะสร้างรายการ Health KPI แล้วล้างข้อมูลในฟอร์มเพื่อเริ่มตัวชี้วัดใหม่'
+          : 'ระบบจะสร้างรายการ Health KPI แล้วคงข้อมูลตัวชี้วัดไว้สำหรับกรอกเขตถัดไป'}
+        confirmLabel="ยืนยันบันทึก"
+        isLoading={loading}
+        onCancel={() => setShowConfirmation(false)}
+        onConfirm={handleConfirmSave}
+        details={(
+          <div className="space-y-1.5">
+            <p><span className="font-black text-slate-700">ตัวชี้วัด:</span> {formData.indicatorName}</p>
+            <p><span className="font-black text-slate-700">เขต:</span> {formData.region}</p>
+            <p><span className="font-black text-slate-700">ปี/รอบ:</span> {formData.fiscalYear} · {formData.period}</p>
+          </div>
+        )}
+      />
 
       {/* SUCCESS MODAL (Premium UI) */}
       {showSuccessModal && (

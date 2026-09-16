@@ -3,9 +3,11 @@ import { FileSpreadsheet, Loader2, CheckCircle, AlertCircle, Link2, ExternalLink
 import { supabase } from '../lib/supabase';
 import { parseOptionalNumber, trimToNull } from '../utils/kpiForm';
 import KpiDataPolicyNotice from '../components/KpiDataPolicyNotice';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 export default function DataEntry() {
   const [loading, setLoading] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [error, setError] = useState(null);
 
@@ -30,7 +32,13 @@ export default function DataEntry() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setShowConfirmation(true);
+  };
+
+  const handleConfirmSave = async () => {
+    setShowConfirmation(false);
     setLoading(true);
+    setError(null);
 
     try {
       const { error: insertError } = await supabase
@@ -302,6 +310,22 @@ export default function DataEntry() {
           </button>
         </div>
       </form>
+
+      <ConfirmationModal
+        open={showConfirmation}
+        title="ยืนยันการบันทึก SDGs"
+        message="กรุณาตรวจสอบข้อมูลก่อนยืนยัน ระบบจะสร้างรายการใหม่ในฐานข้อมูล Supabase"
+        confirmLabel="ยืนยันบันทึก"
+        isLoading={loading}
+        onCancel={() => setShowConfirmation(false)}
+        onConfirm={handleConfirmSave}
+        details={(
+          <div className="space-y-1.5">
+            <p><span className="font-black text-slate-700">ตัวชี้วัด:</span> {formData.indicatorName}</p>
+            <p><span className="font-black text-slate-700">ปี/รอบ:</span> {formData.fiscalYear} · {formData.period}</p>
+          </div>
+        )}
+      />
 
       {/* SUCCESS MODAL */}
       {showSuccessModal && (
