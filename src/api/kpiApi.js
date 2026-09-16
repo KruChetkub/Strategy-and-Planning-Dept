@@ -6,6 +6,7 @@ export async function fetchSDGIndicators(year = '2569', period = 'Q4') {
   let query = supabase
     .from('sdg_indicators')
     .select('*')
+    .eq('is_deleted', false)
     .order('indicator_name', { ascending: true });
 
   if (year && year !== 'All') query = query.eq('fiscal_year', year);
@@ -21,6 +22,7 @@ export async function fetchHealthIndicators(year = '2569', period = 'Q4') {
   let query = supabase
     .from('health_indicators')
     .select('*')
+    .eq('is_deleted', false)
     .order('indicator_name', { ascending: true });
 
   if (year && year !== 'All') query = query.eq('fiscal_year', year);

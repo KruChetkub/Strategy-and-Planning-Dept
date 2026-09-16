@@ -26,6 +26,7 @@ const fetchAllData = async (year, period) => {
   let query = supabase
     .from("sdg_indicators")
     .select("*")
+    .eq("is_deleted", false)
     .order("indicator_name", { ascending: true });
 
   if (year && year !== "All") query = query.eq("fiscal_year", year);

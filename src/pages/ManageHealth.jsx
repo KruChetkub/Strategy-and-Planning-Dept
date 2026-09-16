@@ -369,21 +369,36 @@ export default function ManageHealth() {
     }
   };
 
-  /* ── SOFT DELETE + UNDO ── */
+  /* ── DELETE FROM SUPABASE + UNDO WINDOW ── */
   const handleDelete = (id, label) => {
     const toastId = addToast(`ลบ "${label.slice(0, 25)}..." แล้ว`, 'delete');
     const timerId = setTimeout(async () => {
       try {
-        await supabase.from('health_indicators').update({ is_deleted: true }).eq('id', id);
+        const { data, error } = await supabase
+          .from('health_indicators')
+          .delete()
+          .eq('id', id)
+          .select('id');
+        if (error) throw error;
+        if (!data?.length) throw new Error('ไม่พบข้อมูลหรือไม่มีสิทธิ์ลบข้อมูลนี้');
+
         queryClient.invalidateQueries({ queryKey: ['manage-health'] });
         queryClient.invalidateQueries({ queryKey: ['healthData'] });
         queryClient.invalidateQueries({ queryKey: ['overviewData'] });
-      } catch (err) { addToast(`ลบไม่สำเร็จ: ${err.message}`, 'error'); }
-      removeToast(toastId);
-      delete pendingDeletes.current[toastId];
+        queryClient.invalidateQueries({ queryKey: ['kpiGroup'] });
+      } catch (err) {
+        queryClient.invalidateQueries({ queryKey: ['manage-health'] });
+        addToast(`ลบไม่สำเร็จ: ${err.message}`, 'error');
+      } finally {
+        removeToast(toastId);
+        delete pendingDeletes.current[toastId];
+      }
     }, 5000);
     pendingDeletes.current[toastId] = { timerId, id };
-    queryClient.setQueryData(['manage-health'], old => old?.filter(r => r.id !== id));
+    queryClient.setQueriesData(
+      { queryKey: ['manage-health'] },
+      old => Array.isArray(old) ? old.filter(r => r.id !== id) : old
+    );
   };
 
   const handleUndo = toastId => {

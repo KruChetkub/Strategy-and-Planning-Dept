@@ -311,20 +311,36 @@ export default function ManageSDGs() {
     }
   };
 
-  /* ── SOFT DELETE + UNDO ── */
+  /* ── DELETE FROM SUPABASE + UNDO WINDOW ── */
   const handleDelete = (id, name) => {
     const toastId = addToast(`ลบ "${name.slice(0, 28)}..." แล้ว`, 'delete');
     const timerId = setTimeout(async () => {
       try {
-        await supabase.from('sdg_indicators').update({ is_deleted: true }).eq('id', id);
+        const { data, error } = await supabase
+          .from('sdg_indicators')
+          .delete()
+          .eq('id', id)
+          .select('id');
+        if (error) throw error;
+        if (!data?.length) throw new Error('ไม่พบข้อมูลหรือไม่มีสิทธิ์ลบข้อมูลนี้');
+
         queryClient.invalidateQueries({ queryKey: ['manage-sdgs'] });
         queryClient.invalidateQueries({ queryKey: ['overviewData'] });
-      } catch (err) { addToast(`ลบไม่สำเร็จ: ${err.message}`, 'error'); }
-      removeToast(toastId);
-      delete pendingDeletes.current[toastId];
+        queryClient.invalidateQueries({ queryKey: ['sdgData'] });
+        queryClient.invalidateQueries({ queryKey: ['kpiGroup'] });
+      } catch (err) {
+        queryClient.invalidateQueries({ queryKey: ['manage-sdgs'] });
+        addToast(`ลบไม่สำเร็จ: ${err.message}`, 'error');
+      } finally {
+        removeToast(toastId);
+        delete pendingDeletes.current[toastId];
+      }
     }, 5000);
     pendingDeletes.current[toastId] = { timerId, id };
-    queryClient.setQueryData(['manage-sdgs'], old => old?.filter(k => k.id !== id));
+    queryClient.setQueriesData(
+      { queryKey: ['manage-sdgs'] },
+      old => Array.isArray(old) ? old.filter(k => k.id !== id) : old
+    );
   };
 
   const handleUndo = toastId => {
